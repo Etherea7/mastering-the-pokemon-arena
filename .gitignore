@@ -40,3 +40,5 @@ pokemon_data.db
 prisma/pokemon_data.db
 *.db
 /prisma/*.db
+
+package-lock.json
