@@ -1,0 +1,168 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./pokemon_data.db"
+}
+
+model PokemonAbilities {
+  id            String  @id @default(cuid())
+  name          String
+  generation    String
+  battle_format String
+  rating        Int
+  year_month    String
+  ability       String
+  usage         Float?
+
+  @@unique([name, generation, battle_format, rating, year_month, ability])
+  @@index([usage])
+  @@index([ability])
+  @@map("pokemon_abilities")
+}
+
+model PokemonBase {
+  id                String  @id @default(cuid())
+  name              String
+  generation        String
+  battle_format     String
+  rating            Int
+  raw_count         Int?
+  avg_weight        Float?
+  viability_ceiling Int?
+  year_month        String
+
+  @@unique([name, generation, battle_format, rating, year_month])
+  @@index([viability_ceiling])
+  @@index([generation, battle_format])
+  @@map("pokemon_base")
+}
+
+model PokemonCounters {
+  id                    String  @id @default(cuid())
+  name                  String
+  generation            String
+  battle_format         String
+  rating                Int
+  year_month            String
+  opp_pokemon           String
+  lose_rate_against_opp Float?
+  mean                  Float?
+  std_dev              Float?
+  ko_percent           Float?
+  switch_percent       Float?
+
+  @@unique([name, generation, battle_format, rating, year_month, opp_pokemon])
+  @@index([lose_rate_against_opp])
+  @@index([opp_pokemon])
+  @@map("pokemon_counters")
+}
+
+model PokemonItems {
+  id            String  @id @default(cuid())
+  name          String
+  generation    String
+  battle_format String
+  rating        Int
+  year_month    String
+  item          String
+  usage         Float?
+
+  @@unique([name, generation, battle_format, rating, year_month, item])
+  @@index([usage])
+  @@index([item])
+  @@map("pokemon_items")
+}
+
+model PokemonMoves {
+  id            String  @id @default(cuid())
+  name          String
+  generation    String
+  battle_format String
+  rating        Int
+  year_month    String
+  move          String
+  usage         Float?
+
+  @@unique([name, generation, battle_format, rating, year_month, move])
+  @@index([usage])
+  @@index([move])
+  @@map("pokemon_moves")
+}
+
+model PokemonSpreads {
+  id            String  @id @default(cuid())
+  name          String
+  generation    String
+  battle_format String
+  rating        Int
+  year_month    String
+  nature        String
+  usage         Float?
+  hp_ev         Int?
+  atk_ev        Int?
+  def_ev        Int?
+  spatk_ev      Int?
+  spdef_ev      Int?
+  spd_ev        Int?
+
+  @@unique([name, generation, battle_format, rating, year_month, nature])
+  @@index([usage])
+  @@index([nature])
+  @@map("pokemon_spreads")
+}
+
+model PokemonTeammates {
+  id            String  @id @default(cuid())
+  name          String
+  generation    String
+  battle_format String
+  rating        Int
+  year_month    String
+  teammate      String
+  usage         Float?
+
+  @@unique([name, generation, battle_format, rating, year_month, teammate])
+  @@index([usage])
+  @@index([teammate])
+  @@map("pokemon_teammates")
+}
+
+model PokemonTeraTypes {
+  id            String  @id @default(cuid())
+  name          String
+  generation    String
+  battle_format String
+  rating        Int
+  year_month    String
+  tera_type     String
+  usage         Float?
+
+  @@unique([name, generation, battle_format, rating, year_month, tera_type])
+  @@index([usage])
+  @@index([tera_type])
+  @@map("pokemon_teratypes")
+}
+
+model PokemonUsage {
+  id            String  @id @default(cuid())
+  rank          Int?
+  name          String
+  generation    String
+  battle_format String
+  rating        Int
+  year_month    String
+  usage_percent Float?
+  raw_count     Int?
+  raw_percent   Float?
+  real_count    Int?
+  real_percent  Float?
+
+  @@unique([name, generation, battle_format, rating, year_month])
+  @@index([rank])
+  @@index([usage_percent])
+  @@index([raw_count, real_count])
+  @@map("pokemon_usage")
+}
