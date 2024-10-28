@@ -108,9 +108,9 @@ model PokemonSpreads {
   spdef_ev      Int?
   spd_ev        Int?
 
-  @@unique([name, generation, battle_format, rating, year_month, nature])
-  @@index([usage])
+  @@unique([name, generation, battle_format, rating, year_month, hp_ev, atk_ev, def_ev, spatk_ev, spdef_ev, spd_ev])
   @@index([nature])
+  @@index([usage])
   @@map("pokemon_spreads")
 }
 
