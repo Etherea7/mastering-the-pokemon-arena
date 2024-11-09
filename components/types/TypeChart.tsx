@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { TypeData, useTypeData } from '@/hooks/useTypeData';
 import  TypeButton  from '@/components/types/TypeButton';
+import TypeMatchModal from './TypeMatchModal';
+
 
 const TYPE_COLORS = {
   normal: '#A8A878',
@@ -52,6 +54,7 @@ export default function TypeChart() {
     const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
     const [highlightedAttacker, setHighlightedAttacker] = useState<string | null>(null);
     const [highlightedDefender, setHighlightedDefender] = useState<string | null>(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     if (loading) return <div>Loading...</div>;
     if (error) return <div>Error: {error}</div>;
@@ -78,7 +81,7 @@ export default function TypeChart() {
     };
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-8 p-4 pb-8 max-w-[95vw] mx-auto">
       
 
         {/* Type Selection */}
@@ -118,7 +121,23 @@ export default function TypeChart() {
                           {type}
                         </span>
                       ))}
+
+                    {selectedTypes.length > 0 && (
+                        <button
+                            onClick={() => setIsModalOpen(true)}
+                            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                        >
+                            See Pokémon with these types
+                        </button>
+                    )}
                     </div>
+                    
+                    <TypeMatchModal 
+                        isOpen={isModalOpen}
+                        onOpenChange={setIsModalOpen}
+                        selectedTypes={selectedTypes}
+                    />
+
                   </th>
                 </tr>
               </thead>

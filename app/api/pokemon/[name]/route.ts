@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
-import { commonQuerySchema, errorResponse, successResponse, getPaginationParams, buildWhereClause } from '@/lib/api'
+import { commonQuerySchema, errorResponse, successResponse, buildWhereClause } from '@/lib/api'
 
 const pokemonDetailSchema = commonQuerySchema.extend({
   name: z.string(),
