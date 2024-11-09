@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { TypeData, useTypeData } from '@/hooks/useTypeData';
 import  TypeButton  from '@/components/types/TypeButton';
 import TypeMatchModal from './TypeMatchModal';
+import { Button } from '../ui/button';
+
 
 
 const TYPE_COLORS = {
@@ -112,7 +114,7 @@ export default function TypeChart() {
                       {selectedTypes.map(type => (
                         <span
                           key={type}
-                          className="px-3 py-1 rounded motion-preset-pop"
+                          className="px-3 py-1 rounded motion-preset-slide-down"
                           style={{
                             backgroundColor: TYPE_COLORS[type as keyof typeof TYPE_COLORS],
                             color: ['normal', 'flying', 'ground', 'steel', 'fairy'].includes(type) ? '#000' : '#fff'
@@ -123,12 +125,12 @@ export default function TypeChart() {
                       ))}
 
                     {selectedTypes.length > 0 && (
-                        <button
+                        <Button
                             onClick={() => setIsModalOpen(true)}
-                            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                            className="px-4 py-2 rounded-lg bg-black text-white hover:bg-gray-500 motion-preset-slide-down"
                         >
                             See Pokémon with these types
-                        </button>
+                        </Button>
                     )}
                     </div>
                     
@@ -165,7 +167,7 @@ export default function TypeChart() {
                           {types.map(type => (
                             <span
                               key={type}
-                              className="px-2 py-1 rounded text-sm"
+                              className="px-2 py-1 rounded text-sm motion-preset-slide-right"
                               style={{
                                 backgroundColor: TYPE_COLORS[type as keyof typeof TYPE_COLORS],
                                 color: ['normal', 'flying', 'ground', 'steel', 'fairy'].includes(type) ? '#000' : '#fff'
