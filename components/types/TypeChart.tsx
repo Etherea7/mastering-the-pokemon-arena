@@ -167,15 +167,15 @@ export default function TypeChart() {
       {/* )} */}
 
       {/* Type Chart */}
-      <div className="overflow-x-auto">
-        <table className="min-w-full border-collapse">
+      <div className="overflow-x-auto rounded-lg shadow"> {/* Added shadow and rounded corners */}
+        <table className="w-full border-collapse" > 
           <thead>
             <tr>
-              <th className="p-2 border">Def →<br/>Atk ↓</th>
+              <th className="p-1.5 border text-sm sticky left-0 bg-white z-10">Def →<br/>Atk ↓</th> {/* Reduced padding, sticky header */}
               {typeData.map(type => (
                 <th 
                   key={type.name}
-                  className="p-2 border cursor-pointer transition-opacity duration-200"
+                  className="p-1.5 border cursor-pointer transition-opacity duration-200 text-sm" // Reduced padding, smaller text
                   style={{
                     backgroundColor: TYPE_COLORS[type.name as keyof typeof TYPE_COLORS],
                     color: ['normal', 'flying', 'ground', 'steel', 'fairy'].includes(type.name) ? '#000' : '#fff',
@@ -194,7 +194,7 @@ export default function TypeChart() {
             {typeData.map(attackerType => (
               <tr key={attackerType.name}>
                 <th 
-                  className="p-2 border cursor-pointer transition-opacity duration-200"
+                  className="p-1.5 border cursor-pointer transition-opacity duration-200 text-sm sticky left-0 z-10" // Reduced padding, sticky first column
                   style={{
                     backgroundColor: TYPE_COLORS[attackerType.name as keyof typeof TYPE_COLORS],
                     color: ['normal', 'flying', 'ground', 'steel', 'fairy'].includes(attackerType.name) ? '#000' : '#fff',
@@ -215,7 +215,7 @@ export default function TypeChart() {
                   return (
                     <td 
                       key={defenderType.name}
-                      className="p-2 border text-center transition-opacity duration-200"
+                      className="p-1.5 border text-center transition-opacity duration-200 text-sm" // Reduced padding
                       style={{
                         backgroundColor: 
                           effectiveness === 2 ? '#6c6' :
