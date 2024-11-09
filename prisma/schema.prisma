@@ -8,123 +8,161 @@ datasource db {
 }
 
 model PokemonAbilities {
-  name          String?
-  generation    String?
-  battle_format String?
-  rating        Int?
-  year_month    String?
-  Ability       String?
-  Usage         Float?
-  id            String? @default(cuid())
+  id            String  @id @default(cuid())
+  name          String
+  generation    String
+  battle_format String
+  rating        Int
+  year_month    String
+  ability       String
+  usage         Float?
 
-  @@unique([name, generation, battle_format, rating, year_month, Ability], map: "unique_pokemon_abilities")
-  @@index([Usage], map: "idx_pokemon_abilities_usage")
-  @@index([Ability], map: "idx_pokemon_abilities_ability")
+  @@unique([name, generation, battle_format, rating, year_month, ability])
+  @@index([usage])
+  @@index([ability])
   @@map("pokemon_abilities")
-  @@ignore
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model PokemonBase {
-  name              String?
+  id                String  @id @default(cuid())
+  name              String
+  generation        String
+  battle_format     String
+  rating            Int
   raw_count         Int?
   avg_weight        Float?
   viability_ceiling Int?
-  generation        String?
-  battle_format     String?
-  rating            Int?
-  year_month        String?
-  id                String? @default(cuid())
+  year_month        String
 
-  @@unique([name, generation, battle_format, rating, year_month], map: "unique_pokemon_base")
-  @@index([viability_ceiling], map: "idx_base_viability")
-  @@index([generation, battle_format], map: "idx_base_gen_format")
-  @@index([name], map: "idx_base_name")
+  @@unique([name, generation, battle_format, rating, year_month])
+  @@index([viability_ceiling])
+  @@index([generation, battle_format])
   @@map("pokemon_base")
-  @@ignore
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model PokemonCounters {
-  name                  String?
-  generation            String?
-  battle_format         String?
-  rating                Int?
-  year_month            String?
-  opp_pokemon           String?
-  Lose_Rate_Against_Opp Float?
-  Mean                  Float?
-  Std_Dev               Float?
-  KO_Percent            Float?
-  Switch_Percent        Float?
-  id                    String? @default(cuid())
+  id                    String  @id @default(cuid())
+  name                  String
+  generation            String
+  battle_format         String
+  rating                Int
+  year_month            String
+  opp_pokemon           String
+  lose_rate_against_opp Float?
+  mean                  Float?
+  std_dev              Float?
+  ko_percent           Float?
+  switch_percent       Float?
 
-  @@unique([name, generation, battle_format, rating, year_month, opp_pokemon], map: "unique_pokemon_counters")
-  @@index([Lose_Rate_Against_Opp], map: "idx_counters_lose_rate")
-  @@index([opp_pokemon], map: "idx_counters_opponent")
+  @@unique([name, generation, battle_format, rating, year_month, opp_pokemon])
+  @@index([lose_rate_against_opp])
+  @@index([opp_pokemon])
   @@map("pokemon_counters")
-  @@ignore
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model PokemonItems {
-  name          String?
-  generation    String?
-  battle_format String?
-  rating        Int?
-  year_month    String?
-  Item          String?
-  Usage         Float?
-  id            String? @default(cuid())
+  id            String  @id @default(cuid())
+  name          String
+  generation    String
+  battle_format String
+  rating        Int
+  year_month    String
+  item          String
+  usage         Float?
 
-  @@unique([name, generation, battle_format, rating, year_month, Item], map: "unique_pokemon_items")
-  @@index([Usage], map: "idx_pokemon_items_usage")
-  @@index([Item], map: "idx_pokemon_items_item")
+  @@unique([name, generation, battle_format, rating, year_month, item])
+  @@index([usage])
+  @@index([item])
   @@map("pokemon_items")
-  @@ignore
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model PokemonMoves {
-  Unnamed__0 String? @map("Unnamed: 0")
-  id         Float?
+  id            String  @id @default(cuid())
+  name          String
+  generation    String
+  battle_format String
+  rating        Int
+  year_month    String
+  move          String
+  usage         Float?
 
+  @@unique([name, generation, battle_format, rating, year_month, move])
+  @@index([usage])
+  @@index([move])
   @@map("pokemon_moves")
-  @@ignore
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model PokemonSpreads {
-  Unnamed__0 String? @map("Unnamed: 0")
-  id         Float?
+  id            String  @id @default(cuid())
+  name          String
+  generation    String
+  battle_format String
+  rating        Int
+  year_month    String
+  nature        String
+  usage         Float?
+  hp_ev         Int?
+  atk_ev        Int?
+  def_ev        Int?
+  spatk_ev      Int?
+  spdef_ev      Int?
+  spd_ev        Int?
 
+  @@unique([name, generation, battle_format, rating, year_month, hp_ev, atk_ev, def_ev, spatk_ev, spdef_ev, spd_ev])
+  @@index([nature])
+  @@index([usage])
   @@map("pokemon_spreads")
-  @@ignore
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model PokemonTeammates {
-  Unnamed__0 String? @map("Unnamed: 0")
-  id         Float?
+  id            String  @id @default(cuid())
+  name          String
+  generation    String
+  battle_format String
+  rating        Int
+  year_month    String
+  teammate      String
+  usage         Float?
 
+  @@unique([name, generation, battle_format, rating, year_month, teammate])
+  @@index([usage])
+  @@index([teammate])
   @@map("pokemon_teammates")
-  @@ignore
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model PokemonTeraTypes {
-  Unnamed__0 String? @map("Unnamed: 0")
-  id         Float?
+  id            String  @id @default(cuid())
+  name          String
+  generation    String
+  battle_format String
+  rating        Int
+  year_month    String
+  tera_type     String
+  usage         Float?
 
+  @@unique([name, generation, battle_format, rating, year_month, tera_type])
+  @@index([usage])
+  @@index([tera_type])
   @@map("pokemon_teratypes")
-  @@ignore
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model PokemonUsage {
-  Unnamed__0 String? @map("Unnamed: 0")
-  id         Float?
+  id            String  @id @default(cuid())
+  rank          Int?
+  name          String
+  generation    String
+  battle_format String
+  rating        Int
+  year_month    String
+  usage_percent Float?
+  raw_count     Int?
+  raw_percent   Float?
+  real_count    Int?
+  real_percent  Float?
 
+  @@unique([name, generation, battle_format, rating, year_month])
+  @@index([rank])
+  @@index([usage_percent])
+  @@index([raw_count, real_count])
   @@map("pokemon_usage")
-  @@ignore
 }
