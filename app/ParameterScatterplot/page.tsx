@@ -94,11 +94,11 @@ export default function Component() {
                       key={tier} 
                       name={tier} 
                       data={tierData} 
-                      fill={colors[tier]} 
+                      fill={colors[tier as keyof typeof colors] || "#8884d8"} 
                     />
                   ))
                 ) : (
-                  <Scatter name={selectedTier} data={data[selectedTier]} fill={colors[selectedTier] || "#8884d8"} />
+                  <Scatter name={selectedTier} data={data[selectedTier as keyof typeof data]} fill={colors[selectedTier as keyof typeof colors] || "#8884d8"} />
                 )}
               </ScatterChart>
             </ResponsiveContainer>
