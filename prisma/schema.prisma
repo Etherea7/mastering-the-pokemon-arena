@@ -7,162 +7,153 @@ datasource db {
   url      = "file:./pokemon_data.db?connection_limit=1&connect_timeout=30&pool_timeout=30&socket_timeout=30&mode=readonly"
 }
 
-model PokemonAbilities {
-  id            String  @id @default(cuid())
-  name          String
-  generation    String
-  battle_format String
-  rating        Int
-  year_month    String
-  ability       String
-  usage         Float?
-
-  @@unique([name, generation, battle_format, rating, year_month, ability])
-  @@index([usage])
-  @@index([ability])
-  @@map("pokemon_abilities")
-}
-
 model PokemonBase {
-  id                String  @id @default(cuid())
   name              String
   generation        String
   battle_format     String
   rating            Int
+  year_month        String
   raw_count         Int?
   avg_weight        Float?
   viability_ceiling Int?
-  year_month        String
 
-  @@unique([name, generation, battle_format, rating, year_month])
-  @@index([viability_ceiling])
-  @@index([generation, battle_format])
+  @@id([name, generation, battle_format, rating, year_month])
+  @@index([viability_ceiling], map: "idx_base_viability")
+  @@index([generation, battle_format], map: "idx_base_gen_format")
+  @@index([name], map: "idx_base_name")
   @@map("pokemon_base")
 }
 
-model PokemonCounters {
-  id                    String  @id @default(cuid())
-  name                  String
-  generation            String
-  battle_format         String
-  rating                Int
-  year_month            String
-  opp_pokemon           String
-  lose_rate_against_opp Float?
-  mean                  Float?
-  std_dev              Float?
-  ko_percent           Float?
-  switch_percent       Float?
-
-  @@unique([name, generation, battle_format, rating, year_month, opp_pokemon])
-  @@index([lose_rate_against_opp])
-  @@index([opp_pokemon])
-  @@map("pokemon_counters")
-}
-
-model PokemonItems {
-  id            String  @id @default(cuid())
-  name          String
-  generation    String
-  battle_format String
-  rating        Int
-  year_month    String
-  item          String
-  usage         Float?
-
-  @@unique([name, generation, battle_format, rating, year_month, item])
-  @@index([usage])
-  @@index([item])
-  @@map("pokemon_items")
-}
-
-model PokemonMoves {
-  id            String  @id @default(cuid())
-  name          String
-  generation    String
-  battle_format String
-  rating        Int
-  year_month    String
-  move          String
-  usage         Float?
-
-  @@unique([name, generation, battle_format, rating, year_month, move])
-  @@index([usage])
-  @@index([move])
-  @@map("pokemon_moves")
-}
-
-model PokemonSpreads {
-  id            String  @id @default(cuid())
-  name          String
-  generation    String
-  battle_format String
-  rating        Int
-  year_month    String
-  nature        String
-  usage         Float?
-  hp_ev         Int?
-  atk_ev        Int?
-  def_ev        Int?
-  spatk_ev      Int?
-  spdef_ev      Int?
-  spd_ev        Int?
-
-  @@unique([name, generation, battle_format, rating, year_month, hp_ev, atk_ev, def_ev, spatk_ev, spdef_ev, spd_ev])
-  @@index([nature])
-  @@index([usage])
-  @@map("pokemon_spreads")
-}
-
-model PokemonTeammates {
-  id            String  @id @default(cuid())
-  name          String
-  generation    String
-  battle_format String
-  rating        Int
-  year_month    String
-  teammate      String
-  usage         Float?
-
-  @@unique([name, generation, battle_format, rating, year_month, teammate])
-  @@index([usage])
-  @@index([teammate])
-  @@map("pokemon_teammates")
-}
-
-model PokemonTeraTypes {
-  id            String  @id @default(cuid())
-  name          String
-  generation    String
-  battle_format String
-  rating        Int
-  year_month    String
-  tera_type     String
-  usage         Float?
-
-  @@unique([name, generation, battle_format, rating, year_month, tera_type])
-  @@index([usage])
-  @@index([tera_type])
-  @@map("pokemon_teratypes")
-}
-
 model PokemonUsage {
-  id            String  @id @default(cuid())
-  rank          Int?
   name          String
   generation    String
   battle_format String
   rating        Int
   year_month    String
+  rank          Int?
   usage_percent Float?
   raw_count     Int?
   raw_percent   Float?
   real_count    Int?
   real_percent  Float?
 
-  @@unique([name, generation, battle_format, rating, year_month])
-  @@index([rank])
-  @@index([usage_percent])
-  @@index([raw_count, real_count])
+  @@id([name, generation, battle_format, rating, year_month])
+  @@index([usage_percent], map: "idx_usage_percent")
+  @@index([rank], map: "idx_usage_rank")
   @@map("pokemon_usage")
+}
+
+model PokemonMoves {
+  name          String
+  generation    String
+  battle_format String
+  rating        Int
+  year_month    String
+  Move          String
+  Usage         Float?
+
+  @@id([name, generation, battle_format, rating, year_month, Move])
+  @@index([Usage], map: "idx_pokemon_moves_usage")
+  @@index([Move], map: "idx_pokemon_moves_move")
+  @@map("pokemon_moves")
+}
+
+model PokemonAbilities {
+  name          String
+  generation    String
+  battle_format String
+  rating        Int
+  year_month    String
+  Ability       String
+  Usage         Float?
+
+  @@id([name, generation, battle_format, rating, year_month, Ability])
+  @@index([Usage], map: "idx_pokemon_abilities_usage")
+  @@index([Ability], map: "idx_pokemon_abilities_ability")
+  @@map("pokemon_abilities")
+}
+
+model PokemonItems {
+  name          String
+  generation    String
+  battle_format String
+  rating        Int
+  year_month    String
+  Item          String
+  Usage         Float?
+
+  @@id([name, generation, battle_format, rating, year_month, Item])
+  @@index([Usage], map: "idx_pokemon_items_usage")
+  @@index([Item], map: "idx_pokemon_items_item")
+  @@map("pokemon_items")
+}
+
+model PokemonTeammates {
+  name          String
+  generation    String
+  battle_format String
+  rating        Int
+  year_month    String
+  Teammate      String
+  Usage         Float?
+
+  @@id([name, generation, battle_format, rating, year_month, Teammate])
+  @@index([Usage], map: "idx_pokemon_teammates_usage")
+  @@index([Teammate], map: "idx_pokemon_teammates_teammate")
+  @@map("pokemon_teammates")
+}
+
+model PokemonTeraTypes {
+  name          String
+  generation    String
+  battle_format String
+  rating        Int
+  year_month    String
+  tera_type     String
+  Usage         Float?
+
+  @@id([name, generation, battle_format, rating, year_month, tera_type])
+  @@index([Usage], map: "idx_pokemon_teratypes_usage")
+  @@index([tera_type], map: "idx_pokemon_teratypes_tera_type")
+  @@map("pokemon_teratypes")
+}
+
+model PokemonSpreads {
+  name          String
+  generation    String
+  battle_format String
+  rating        Int
+  year_month    String
+  Nature        String
+  hp_ev         Int
+  atk_ev        Int
+  def_ev        Int
+  spatk_ev      Int
+  spdef_ev      Int
+  spd_ev        Int
+  Usage         Float?
+
+  @@id([name, generation, battle_format, rating, year_month, Nature, hp_ev, atk_ev, def_ev, spatk_ev, spdef_ev, spd_ev])
+  @@index([Usage], map: "idx_spreads_usage")
+  @@index([Nature], map: "idx_spreads_nature")
+  @@map("pokemon_spreads")
+}
+
+model PokemonCounters {
+  name                  String
+  generation            String
+  battle_format         String
+  rating                Int
+  year_month            String
+  opp_pokemon           String
+  Lose_Rate_Against_Opp Float?
+  Mean                  Float?
+  Std_Dev              Float?
+  KO_Percent            Float?
+  Switch_Percent        Float?
+
+  @@id([name, generation, battle_format, rating, year_month, opp_pokemon])
+  @@index([Lose_Rate_Against_Opp], map: "idx_counters_lose_rate")
+  @@index([opp_pokemon], map: "idx_counters_opponent")
+  @@map("pokemon_counters")
 }

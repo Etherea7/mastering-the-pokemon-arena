@@ -8,33 +8,22 @@ export const navItems: NavItem[] = [
     label: 'Dashboard'
   },
   {
-    title: 'User',
-    href: '/dashboard/user',
-    icon: 'user',
-    label: 'user'
+    title: 'Team Analyser',
+    href: '/PokemonTeamAnalyser',
+    icon: 'dashboard',
+    label: 'Team Analyser'
   },
   {
-    title: 'Employee',
-    href: '/dashboard/employee',
-    icon: 'employee',
-    label: 'employee'
+    title: 'Types',
+    href: '/Types',
+    icon: 'dashboard',
+    label: 'Types'
   },
   {
-    title: 'Profile',
-    href: '/dashboard/profile',
-    icon: 'profile',
-    label: 'profile'
+    title: 'ScatterPlot',
+    href: '/PokemonScatterPlot',
+    icon: 'dashboard',
+    label: 'PokemonScatterPlot'
   },
-  {
-    title: 'Kanban',
-    href: '/dashboard/kanban',
-    icon: 'kanban',
-    label: 'kanban'
-  },
-  {
-    title: 'Login',
-    href: '/',
-    icon: 'login',
-    label: 'login'
-  }
+  
 ];
