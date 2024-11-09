@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
-// import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table" // Commented out
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table" // Commented out
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Loader2 } from "lucide-react"
@@ -36,7 +36,7 @@ export default function PokemonUsagePage() {
   const [endMonth, setEndMonth] = useState('02')
   const [endYear, setEndYear] = useState('2024')
   const [chartData, setChartData] = useState<any[]>([])
-  // const [statsData, setStatsData] = useState<any[]>([]) // Commented out
+  const [statsData, setStatsData] = useState<any[]>([]) // Commented out
   const [activePreset, setActivePreset] = useState<number>(5)
   const [loading, setLoading] = useState(true)
 
@@ -124,21 +124,26 @@ export default function PokemonUsagePage() {
     }
   }
 
-  /* Commented out stats fetching
   const fetchStatsData = async () => {
     try {
       setLoading(true)
       const promises = selectedPokemon.map(pokemon =>
-        fetch(`/api/stats/${pokemon}`).then(res => res.json())
+        fetch(`/api/pokemon/stats/${pokemon}`).then(res => res.json())
       )
       const results = await Promise.all(promises)
+      console.log("Raw API results:", results)
+  
       const validResults = results
-        .filter(result => result.data)
+        .filter(result => {
+          return result && result.id && result.name
+        })
         .map(result => ({
-          pokemon: result.data.name,
-          usage: result.data.raw_count,
-          winRate: result.data.viability_ceiling
+          pokemon: result.name,
+          usage: result.raw_count !== undefined ? parseInt(result.raw_count) : null,
+          winRate: result.viability_ceiling !== undefined ? parseInt(result.viability_ceiling) : null
         }))
+  
+      console.log("Filtered and mapped results:", validResults)
       setStatsData(validResults)
     } catch (error) {
       console.error('Error fetching stats data:', error)
@@ -146,20 +151,18 @@ export default function PokemonUsagePage() {
       setLoading(false)
     }
   }
-  */
 
   // Fetch data when filters change
   useEffect(() => {
     fetchUsageData()
   }, [selectedTier, startMonth, startYear, endMonth, endYear, activePreset])
 
-  /* Commented out stats effect
+  /* stats effect */
   useEffect(() => {
     if (selectedPokemon.length > 0) {
       fetchStatsData()
     }
   }, [selectedPokemon])
-  */
 
   const handlePresetClick = (top: number) => {
     if (top === activePreset) return
@@ -359,7 +362,6 @@ export default function PokemonUsagePage() {
           </CardContent>
         </Card>
 
-        {/* Commented out Stats Table Card
         <Card>
           <CardHeader>
             <CardTitle>Stats Table</CardTitle>
@@ -382,8 +384,8 @@ export default function PokemonUsagePage() {
                   {statsData.map((row, index) => (
                     <TableRow key={row.pokemon} className={index % 2 === 0 ? 'bg-muted' : ''}>
                       <TableCell>{row.pokemon}</TableCell>
-                      <TableCell>{row.usage?.toLocaleString() || 'N/A'}</TableCell>
-                      <TableCell>{row.winRate || 'N/A'}</TableCell>
+                      <TableCell>{row.usage?.toLocaleString() ?? 'N/A'}</TableCell>
+                      <TableCell>{row.winRate ?? 'N/A'}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -391,7 +393,7 @@ export default function PokemonUsagePage() {
             )}
           </CardContent>
         </Card>
-        */}
+          
       </div>
     </ScrollArea>
   )
