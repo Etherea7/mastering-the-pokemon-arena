@@ -21,10 +21,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.className} overflow-hidden`} suppressHydrationWarning={true}>
-
         <NextTopLoader showSpinner={false} />
         <Toaster />
-
         <div className="flex h-screen">
           <Sidebar />
           <main className="flex-1 overflow-y-auto">

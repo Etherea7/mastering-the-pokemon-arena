@@ -21,7 +21,7 @@ export const navItems: NavItem[] = [
   },
   {
     title: 'ScatterPlot',
-    href: '/PokemonScatterPlot',
+    href: '/PokemonScatterplot',
     icon: 'dashboard',
     label: 'PokemonScatterPlot'
   },

@@ -5,8 +5,6 @@ export default function page() {
     return (
         <PageContainer>
             <div>
-
-                Hi 
                 <TypeChart/>
             </div>
         </PageContainer>
