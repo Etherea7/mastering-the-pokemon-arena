@@ -44,3 +44,4 @@ export async function GET(
     return errorResponse(`Failed to fetch details for Pokemon: ${params.name}`);
   }
 }
+

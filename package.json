@@ -25,7 +25,7 @@
     "@dnd-kit/sortable": "^8.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@hookform/resolvers": "^3.3.2",
-    "@prisma/client": "^5.21.1",
+    "@prisma/client": "^5.22.0",
     "@radix-ui/react-accordion": "^1.1.2",
     "@radix-ui/react-alert-dialog": "^1.0.5",
     "@radix-ui/react-avatar": "^1.0.4",
@@ -59,7 +59,6 @@
     "eslint-config-next": "^14.0.1",
     "lucide-react": "^0.291.0",
     "next": "^14.2.3",
-    "next-auth": "^5.0.0-beta.18",
     "next-themes": "^0.2.1",
     "nextjs-toploader": "^1.6.12",
     "postcss": "8.4.28",
@@ -85,6 +84,6 @@
     "lint-staged": "^15.2.7",
     "prettier": "3.0.3",
     "prettier-plugin-tailwindcss": "^0.5.14",
-    "prisma": "^5.21.1"
+    "prisma": "^5.22.0"
   }
 }
