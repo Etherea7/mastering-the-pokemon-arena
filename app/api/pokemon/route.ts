@@ -83,21 +83,19 @@ export async function GET(request: NextRequest) {
       orderBy: { name: 'asc' }
     });
     
-    // Transform the Pokemon list to include all forms and remove duplicates
-    const expandedPokemonSet = new Set(
-      uniquePokemon.flatMap(pokemon => {
-        const baseName = pokemon.name.toLowerCase();
-        // If the Pokemon has specific forms in our mapping, use those
-        if (POKEMON_FORM_MAPPING[baseName]) {
-          return POKEMON_FORM_MAPPING[baseName];
-        }
-        // Otherwise just use the base name
-        return [baseName];
-      })
-    );
+    // Transform the Pokemon list to include all forms
+    const expandedPokemonList = uniquePokemon.flatMap(pokemon => {
+      const baseName = pokemon.name.toLowerCase();
+      // If the Pokemon has specific forms in our mapping, use those
+      if (POKEMON_FORM_MAPPING[baseName]) {
+        return POKEMON_FORM_MAPPING[baseName];
+      }
+      // Otherwise just use the base name
+      return [baseName];
+    });
 
-    // Convert Set back to sorted array
-    const sortedList = Array.from(expandedPokemonSet).sort((a, b) => a.localeCompare(b));
+    // Sort the list alphabetically
+    const sortedList = expandedPokemonList.sort((a, b) => a.localeCompare(b));
     
     return successResponse(sortedList);
   } catch (error) {

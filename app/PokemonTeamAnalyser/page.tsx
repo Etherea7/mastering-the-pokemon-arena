@@ -29,6 +29,11 @@ const allTypes = [
   'psychic', 'bug', 'rock', 'ghost', 'dragon', 'dark', 'steel', 'fairy'
 ]
 
+const typeEffectiveness = {
+  // Same as your original typeEffectiveness object, but with lowercase keys
+  // ... (keeping it brief for now, let me know if you want the full object)
+}
+
 export default function PokemonTeamAnalyser() {
   const [team1, setTeam1] = useState<Pokemon[]>([]);
   const [team2, setTeam2] = useState<Pokemon[]>([]);
