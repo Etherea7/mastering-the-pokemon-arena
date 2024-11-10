@@ -1,6 +1,10 @@
 import { prisma } from '@/lib/prisma'
-import { NextRequest } from 'next/server'
-import { errorResponse, successResponse } from '@/lib/api'
+import { z } from 'zod'
+import { commonQuerySchema, errorResponse, successResponse } from '@/lib/api'
+
+const formatSchema = commonQuerySchema.extend({
+  format: z.string().optional(),
+});
 
 const POKEMON_FORM_MAPPING: Record<string, string[]> = {
   // Mega Evolutions
@@ -75,32 +79,69 @@ const POKEMON_FORM_MAPPING: Record<string, string[]> = {
   'zygarde': ['zygarde-50', 'zygarde-10', 'zygarde-complete']
 };
 
-export async function GET(request: NextRequest) {
+export async function GET(request: Request) {
   try {
-    const uniquePokemon = await prisma.pokemonBase.findMany({
-      distinct: ['name'],
-      select: { name: true },
-      orderBy: { name: 'asc' }
-    });
-    
-    // Transform the Pokemon list to include all forms and remove duplicates
-    const expandedPokemonSet = new Set(
-      uniquePokemon.flatMap(pokemon => {
-        const baseName = pokemon.name.toLowerCase();
-        // If the Pokemon has specific forms in our mapping, use those
-        if (POKEMON_FORM_MAPPING[baseName]) {
-          return POKEMON_FORM_MAPPING[baseName];
-        }
-        // Otherwise just use the base name
-        return [baseName];
-      })
+    const { searchParams } = new URL(request.url);
+    const validatedParams = formatSchema.parse(
+      Object.fromEntries(searchParams)
     );
-
-    // Convert Set back to sorted array
-    const sortedList = Array.from(expandedPokemonSet).sort((a, b) => a.localeCompare(b));
     
-    return successResponse(sortedList);
+    const { format } = validatedParams;
+
+    if (format) {
+      // Get distinct Pokemon names for a specific format
+      const pokemon = await prisma.pokemonBase.findMany({
+        where: {
+          battle_format: format
+        },
+        select: {
+          name: true,
+        },
+        distinct: ['name'],
+        orderBy: {
+          name: 'asc'
+        }
+      });
+
+      // Transform the Pokemon list to include all forms and remove duplicates
+      const expandedPokemonSet = new Set(
+        pokemon.flatMap(p => {
+          const baseName = p.name.toLowerCase();
+          // If the Pokemon has specific forms in our mapping, use those
+          if (POKEMON_FORM_MAPPING[baseName]) {
+            return POKEMON_FORM_MAPPING[baseName];
+          }
+          // Otherwise just use the base name
+          return [baseName];
+        })
+      );
+
+      // Convert Set back to sorted array
+      const sortedList = Array.from(expandedPokemonSet).sort((a, b) => a.localeCompare(b));
+
+      return successResponse({
+        format,
+        pokemon: sortedList,
+        count: sortedList.length
+      });
+    } else {
+      // Get distinct battle formats
+      const formats = await prisma.pokemonBase.findMany({
+        select: {
+          battle_format: true,
+        },
+        distinct: ['battle_format'],
+        orderBy: {
+          battle_format: 'asc'
+        }
+      });
+
+      return successResponse({
+        formats: formats.map(f => f.battle_format),
+        count: formats.length
+      });
+    }
   } catch (error) {
-    return errorResponse(`Failed to fetch Pokemon list: ${error.message}`);
+    return errorResponse('Failed to fetch Pokemon formats data');
   }
 }
