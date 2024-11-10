@@ -43,123 +43,125 @@ export default function PokemonUsagePage() {
   // Fetch usage data for chart
   // Keep all your existing imports and constants, but update the fetchUsageData function:
 
-  const fetchUsageData = async () => {
-    try {
-      setLoading(true)
-      const params = new URLSearchParams({
-        battle_format: selectedTier.toLowerCase(),
-        year_month_gte: `${startYear}-${startMonth}`,
-        year_month_lte: `${endYear}-${endMonth}`,
-      })
-      
-      console.log('Fetching data for:', selectedTier, 'from:', `${startYear}-${startMonth}`, 'to:', `${endYear}-${endMonth}`)
-      
-      const response = await fetch(`/api/pokemon/usage?${params}`)
-      const result = await response.json()
-      
-      if (result.data) {
-        // Get all unique months
-        const allMonths = [...new Set(result.data.map((item: any) => item.year_month))].sort()
-        
-        // Calculate average usage for each Pokemon across the selected period
-        const pokemonAverages = result.data.reduce((acc, curr) => {
-          if (!acc[curr.name]) {
-            acc[curr.name] = {
-              totalUsage: curr.usage_percent,
-              months: 1,
-              monthlyData: { [curr.year_month]: curr.usage_percent }
-            }
-          } else {
-            if (!acc[curr.name].monthlyData[curr.year_month]) {
-              acc[curr.name].totalUsage += curr.usage_percent
-              acc[curr.name].months += 1
-              acc[curr.name].monthlyData[curr.year_month] = curr.usage_percent
-            }
-          }
-          return acc
-        }, {})
   
-        // Convert to array and calculate true averages
-        const pokemonRankings = Object.entries(pokemonAverages)
-          .map(([name, data]: [string, any]) => ({
-            name,
-            averageUsage: data.totalUsage / data.months,
-            monthsPresent: data.months,
-            totalMonths: allMonths.length
-          }))
-          // Sort by average usage and filter for Pokemon present in at least half the months
-          .filter(p => p.monthsPresent >= allMonths.length * 0.5)
-          .sort((a, b) => b.averageUsage - a.averageUsage)
-  
-        console.log('Top Pokemon average usage across period:', 
-          pokemonRankings.slice(0, activePreset)
-            .map(p => `${p.name}: ${p.averageUsage.toFixed(2)}% (present in ${p.monthsPresent}/${p.totalMonths} months)`)
-        )
-  
-        // Get top Pokemon names
-        const topPokemon = pokemonRankings
-          .slice(0, activePreset)
-          .map(p => p.name)
-  
-        setSelectedPokemon(topPokemon)
-        
-        // Create monthly data points for top Pokemon
-        const transformedData = allMonths.map(month => {
-          const monthData = { month }
-          topPokemon.forEach(pokemon => {
-            const record = result.data.find(item => 
-              item.name === pokemon && item.year_month === month
-            )
-            monthData[pokemon] = record ? record.usage_percent : null
-          })
-          return monthData
-        })
-  
-        setChartData(transformedData)
-      }
-    } catch (error) {
-      console.error('Error fetching usage data:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
 
-  const fetchStatsData = async () => {
-    try {
-      setLoading(true)
-      const promises = selectedPokemon.map(pokemon =>
-        fetch(`/api/pokemon/stats/${pokemon}`).then(res => res.json())
-      )
-      const results = await Promise.all(promises)
-      console.log("Raw API results:", results)
   
-      const validResults = results
-        .filter(result => {
-          return result && result.id && result.name
-        })
-        .map(result => ({
-          pokemon: result.name,
-          usage: result.raw_count !== undefined ? parseInt(result.raw_count) : null,
-          winRate: result.viability_ceiling !== undefined ? parseInt(result.viability_ceiling) : null
-        }))
-  
-      console.log("Filtered and mapped results:", validResults)
-      setStatsData(validResults)
-    } catch (error) {
-      console.error('Error fetching stats data:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   // Fetch data when filters change
   useEffect(() => {
+    const fetchUsageData = async () => {
+      try {
+        setLoading(true)
+        const params = new URLSearchParams({
+          battle_format: selectedTier.toLowerCase(),
+          year_month_gte: `${startYear}-${startMonth}`,
+          year_month_lte: `${endYear}-${endMonth}`,
+        })
+        
+        console.log('Fetching data for:', selectedTier, 'from:', `${startYear}-${startMonth}`, 'to:', `${endYear}-${endMonth}`)
+        
+        const response = await fetch(`/api/pokemon/usage?${params}`)
+        const result = await response.json()
+        
+        if (result.data) {
+          // Get all unique months
+          const allMonths = [...new Set(result.data.map((item: any) => item.year_month))].sort()
+          
+          // Calculate average usage for each Pokemon across the selected period
+          const pokemonAverages = result.data.reduce((acc, curr) => {
+            if (!acc[curr.name]) {
+              acc[curr.name] = {
+                totalUsage: curr.usage_percent,
+                months: 1,
+                monthlyData: { [curr.year_month]: curr.usage_percent }
+              }
+            } else {
+              if (!acc[curr.name].monthlyData[curr.year_month]) {
+                acc[curr.name].totalUsage += curr.usage_percent
+                acc[curr.name].months += 1
+                acc[curr.name].monthlyData[curr.year_month] = curr.usage_percent
+              }
+            }
+            return acc
+          }, {})
+    
+          // Convert to array and calculate true averages
+          const pokemonRankings = Object.entries(pokemonAverages)
+            .map(([name, data]: [string, any]) => ({
+              name,
+              averageUsage: data.totalUsage / data.months,
+              monthsPresent: data.months,
+              totalMonths: allMonths.length
+            }))
+            // Sort by average usage and filter for Pokemon present in at least half the months
+            .filter(p => p.monthsPresent >= allMonths.length * 0.5)
+            .sort((a, b) => b.averageUsage - a.averageUsage)
+    
+          console.log('Top Pokemon average usage across period:', 
+            pokemonRankings.slice(0, activePreset)
+              .map(p => `${p.name}: ${p.averageUsage.toFixed(2)}% (present in ${p.monthsPresent}/${p.totalMonths} months)`)
+          )
+    
+          // Get top Pokemon names
+          const topPokemon = pokemonRankings
+            .slice(0, activePreset)
+            .map(p => p.name)
+    
+          setSelectedPokemon(topPokemon)
+          
+          // Create monthly data points for top Pokemon
+          const transformedData = allMonths.map(month => {
+            const monthData = { month }
+            topPokemon.forEach(pokemon => {
+              const record = result.data.find(item => 
+                item.name === pokemon && item.year_month === month
+              )
+              monthData[pokemon] = record ? record.usage_percent : null
+            })
+            return monthData
+          })
+    
+          setChartData(transformedData)
+        }
+      } catch (error) {
+        console.error('Error fetching usage data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
     fetchUsageData()
   }, [selectedTier, startMonth, startYear, endMonth, endYear, activePreset])
 
   /* stats effect */
   useEffect(() => {
     if (selectedPokemon.length > 0) {
+      const fetchStatsData = async () => {
+        try {
+          setLoading(true)
+          const promises = selectedPokemon.map(pokemon =>
+            fetch(`/api/pokemon/stats/${pokemon}`).then(res => res.json())
+          )
+          const results = await Promise.all(promises)
+          console.log("Raw API results:", results)
+      
+          const validResults = results
+            .filter(result => {
+              return result && result.id && result.name
+            })
+            .map(result => ({
+              pokemon: result.name,
+              usage: result.raw_count !== undefined ? parseInt(result.raw_count) : null,
+              winRate: result.viability_ceiling !== undefined ? parseInt(result.viability_ceiling) : null
+            }))
+      
+          console.log("Filtered and mapped results:", validResults)
+          setStatsData(validResults)
+        } catch (error) {
+          console.error('Error fetching stats data:', error)
+        } finally {
+          setLoading(false)
+        }
+      }
       fetchStatsData()
     }
   }, [selectedPokemon])

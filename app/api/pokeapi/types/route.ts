@@ -1,5 +1,4 @@
 // app/api/pokeapi/types/route.ts
-import { NextResponse } from 'next/server'
 import { errorResponse, successResponse } from '@/lib/api'
 
 const EXCLUDED_TYPES = ['stellar', 'unknown'];
