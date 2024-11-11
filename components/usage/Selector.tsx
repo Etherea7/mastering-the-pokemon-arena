@@ -43,147 +43,21 @@ interface PokemonData {
   }
 
 // Helper function to get sprite URL from PokeAPI
-function formatPokemonNameForApi(name: string): string {
-    // Special cases mapping
-    const specialCases: { [key: string]: string } = {
-      'Tapu Koko': 'tapu-koko',
-      'Tapu Lele': 'tapu-lele',
-      'Tapu Bulu': 'tapu-bulu',
-      'Tapu Fini': 'tapu-fini',
-      'Mr. Mime': 'mr-mime',
-      'Mr. Mime-Galar': 'mr-mime-galar',
-      'Mr. Rime': 'mr-rime',
-      'Type: Null': 'type-null',
-      'Mime Jr.': 'mime-jr',
-      'Nidoran♀': 'nidoran-f',
-      'Nidoran♂': 'nidoran-m',
-      'Flabébé': 'flabebe',
-      'Great Tusk': 'great-tusk',
-      'Scream Tail': 'scream-tail',
-      'Brute Bonnet': 'brute-bonnet',
-      'Flutter Mane': 'flutter-mane',
-      'Sandy Shocks': 'sandy-shocks',
-      'Iron Treads': 'iron-treads',
-      'Iron Bundle': 'iron-bundle',
-      'Iron Hands': 'iron-hands',
-      'Iron Jugulis': 'iron-jugulis',
-      'Iron Moth': 'iron-moth',
-      'Iron Thorns': 'iron-thorns',
-      'Roaring Moon': 'roaring-moon',
-      'Iron Valiant': 'iron-valiant',
-      'Walking Wake': 'walking-wake',
-      'Iron Leaves': 'iron-leaves',
-      'Ting-Lu': 'ting-lu',
-      'Chien-Pao': 'chien-pao',
-      'Wo-Chien': 'wo-chien',
-      'Chi-Yu': 'chi-yu',
-      'Tauros-Paldea-Combat': 'tauros-paldean-combat',
-      'Tauros-Paldea-Blaze': 'tauros-paldean-blaze',
-      'Tauros-Paldea-Aqua': 'tauros-paldean-aqua',
-      'Tauros-Paldea-Water': 'tauros-paldean-water',
-      'Tauros-Paldea-Fire': 'tauros-paldean-fire',
-      'Oinkologne-F': 'oinkologne-female',
-      'Meowstic-F': 'meowstic-female',
-      'Indeedee-F': 'indeedee-female',
-      'Basculegion-F': 'basculegion-female',
-      'Ogerpon-Hearthflame': 'ogerpon-hearthflame-mask',
-      'Ogerpon-Cornerstone': 'ogerpon-cornerstone-mask',
-      'Ogerpon-Wellspring': 'ogerpon-wellspring-mask',
-      'Oinkologne': 'oinkologne-male',
-      'Meowstic': 'meowstic-male',
-      'Indeedee': 'indeedee-male',
-      'Basculegion': 'basculegion-male',
-      'Basculin': 'basculin-red-striped',
-      'Oricorio': 'oricorio-baile',
-      'Lycanroc': 'lycanroc-midday',
-      'Minior': 'minior-red-meteor',
-      'Mimikyu': 'mimikyu-disguised',
-      'Toxtricity': 'toxtricity-amped',
-      'Eiscue': 'eiscue-ice',
-      'Morpeko': 'morpeko-full-belly',
-      'Dudunsparce': 'dudunsparce-two-segment',
-      'Palafin': 'palafin-zero',
-      'Maushold': 'maushold-family4',
-      'Squawkabilly': 'squawkabilly-green',
-      'Tatsugiri': 'tatsugiri-curly',
-      'Thundurus': 'thundurus-incarnate',
-      'Tornadus': 'tornadus-incarnate',
-      'Enamorus': 'enamorus-incarnate',
-      'Keldeo': 'keldeo-ordinary',
-      'Shaymin': 'shaymin-land',
-      'Meloetta': 'meloetta-aria',
-    };
-    
-    const formSuffixesToRemove = [
-        'Silvally-',
-        'Arceus-',
-        'Genesect-',
-      ];
-
-    if (specialCases[name]) {
-        return specialCases[name];
-    }
-
-    // Handle forms that need to be removed
-    for (const prefix of formSuffixesToRemove) {
-        if (name.startsWith(prefix)) {
-            return prefix.slice(0, -1).toLowerCase();
-        }
-    }
-
-    // Handle regional forms
-    const regionalForms = {
-        'Alolan': 'alola',
-        'Galarian': 'galar',
-        'Hisuian': 'hisui',
-        'Paldean': 'paldea'
-    };
-
-    for (const [form, region] of Object.entries(regionalForms)) {
-        if (name.includes(form)) {
-          const baseName = name.split('-')[0].toLowerCase();
-          return `${baseName}-${region}`;
-        }
-      }
-    
-      // Default formatting: lowercase and replace spaces with hyphens
-      let formattedName = name.toLowerCase().replace(/\s+/g, '-');
-      
-      // Remove special characters except hyphens
-      formattedName = formattedName.replace(/[^a-z0-9-]/g, '');
-    
-      return formattedName;
-    // Handle forms and regional variants
-
-  }
   
   // Modified getPokemonSprite function
   async function getPokemonData(name: string): Promise<{ spriteUrl: string, types: string[] }> {
     try {
-      const formattedName = formatPokemonNameForApi(name);
-      
-      const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${formattedName}`);
+      const response = await fetch(`/api/pokeapi/sprites/${encodeURIComponent(name)}`);
       
       if (!response.ok) {
-        const baseName = name.split('-')[0].toLowerCase();
-        const fallbackResponse = await fetch(`https://pokeapi.co/api/v2/pokemon/${baseName}`);
-        
-        if (!fallbackResponse.ok) {
-          console.warn(`Pokemon data not found for ${name} (tried: ${formattedName} and ${baseName})`);
-          return { spriteUrl: '', types: [] };
-        }
-        
-        const fallbackData = await fallbackResponse.json();
-        return {
-          spriteUrl: fallbackData.sprites.front_default || '',
-          types: fallbackData.types.map((t: any) => t.type.name)
-        };
+        console.warn(`Pokemon data not found for ${name}`);
+        return { spriteUrl: '', types: [] };
       }
-  
+      
       const data = await response.json();
       return {
-        spriteUrl: data.sprites.front_default || '',
-        types: data.types.map((t: any) => t.type.name)
+        spriteUrl: data.sprite,
+        types: data.types
       };
     } catch (error) {
       console.error(`Error fetching Pokemon data for ${name}:`, error);

@@ -1,5 +1,33 @@
-// hooks/usePokemonStats.ts
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Loader2, ArrowUpIcon, ArrowDownIcon, MinusIcon } from "lucide-react"
+import { cn } from "@/lib/utils"
+import Image from 'next/image'
+import { Badge } from "@/components/ui/badge"
 import { useState, useEffect } from 'react'
+
+
+// Type color mapping for type badges
+const typeColors: { [key: string]: { bg: string, text: string } } = {
+  normal: { bg: "bg-gray-400", text: "text-white" },
+  fire: { bg: "bg-red-500", text: "text-white" },
+  water: { bg: "bg-blue-500", text: "text-white" },
+  electric: { bg: "bg-yellow-400", text: "text-black" },
+  grass: { bg: "bg-green-500", text: "text-white" },
+  ice: { bg: "bg-blue-200", text: "text-black" },
+  fighting: { bg: "bg-red-700", text: "text-white" },
+  poison: { bg: "bg-purple-500", text: "text-white" },
+  ground: { bg: "bg-amber-600", text: "text-white" },
+  flying: { bg: "bg-indigo-300", text: "text-black" },
+  psychic: { bg: "bg-pink-500", text: "text-white" },
+  bug: { bg: "bg-lime-500", text: "text-white" },
+  rock: { bg: "bg-yellow-700", text: "text-white" },
+  ghost: { bg: "bg-purple-700", text: "text-white" },
+  dragon: { bg: "bg-indigo-600", text: "text-white" },
+  dark: { bg: "bg-gray-700", text: "text-white" },
+  steel: { bg: "bg-gray-400", text: "text-white" },
+  fairy: { bg: "bg-pink-300", text: "text-black" },
+}
 
 interface PokemonStatsData {
   averageUsage: {
@@ -28,68 +56,79 @@ interface PokemonStats extends PokemonStatsData {
   pokemon: string
 }
 
-export function usePokemonStats(
-  selectedPokemon: string[], 
-  selectedGeneration: string,
-  yearMonthGte?: string,
-  yearMonthLte?: string
-) {
-  const [statsData, setStatsData] = useState<PokemonStats[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    if (selectedPokemon.length > 0) {
-      const fetchStatsData = async () => {
-        try {
-          setLoading(true)
-          const params = new URLSearchParams({
-            generation: selectedGeneration,
-            ...(yearMonthGte && { year_month_gte: yearMonthGte }),
-            ...(yearMonthLte && { year_month_lte: yearMonthLte })
-          })
-          
-          const promises = selectedPokemon.map(pokemon =>
-            fetch(`/api/pokemon/stats/${pokemon}?${params}`)
-              .then(res => res.json())
-          )
-          
-          const results = await Promise.all(promises)
-          
-          const validResults = results
-            .filter(result => result && !result.error)
-            .map((result, index) => ({
-              pokemon: selectedPokemon[index],
-              ...result
-            }))
-      
-          setStatsData(validResults)
-        } catch (error) {
-          console.error('Error fetching stats data:', error)
-          setStatsData([])
-        } finally {
-          setLoading(false)
-        }
-      }
-
-      fetchStatsData()
-    } else {
-      setStatsData([])
-      setLoading(false)
-    }
-  }, [selectedPokemon, selectedGeneration, yearMonthGte, yearMonthLte])
-
-  return { statsData, loading }
-}
-
-// components/usage/StatTable.tsx
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Loader2, ArrowUpIcon, ArrowDownIcon, MinusIcon } from "lucide-react"
-import { cn } from "@/lib/utils"
-
 interface StatsTableProps {
   loading: boolean
   statsData: PokemonStats[]
+}
+
+// TypeBadge component for consistent type display
+function TypeBadge({ type }: { type: string }) {
+  const colors = typeColors[type] || { bg: "bg-gray-500", text: "text-white" }
+  
+  return (
+    <Badge 
+      variant="secondary" 
+      className={cn(
+        "ml-1 text-xs capitalize",
+        colors.bg,
+        colors.text
+      )}
+    >
+      {type}
+    </Badge>
+  )
+}
+
+// PokemonDisplay component for consistent Pokemon display with sprite and types
+function PokemonDisplay({ name }: { name: string }) {
+  const [spriteData, setSpriteData] = useState<{ spriteUrl: string, types: string[] }>({
+    spriteUrl: '',
+    types: []
+  })
+
+  useEffect(() => {
+    const fetchSpriteData = async () => {
+      try {
+        const response = await fetch(`/api/pokeapi/sprites/${encodeURIComponent(name)}`)
+        if (response.ok) {
+          const data = await response.json()
+          setSpriteData({
+            spriteUrl: data.sprite,
+            types: data.types
+          })
+        }
+      } catch (error) {
+        console.error(`Error fetching sprite data for ${name}:`, error)
+      }
+    }
+
+    fetchSpriteData()
+  }, [name])
+
+  return (
+    <div className="flex items-center gap-2">
+      {spriteData.spriteUrl && (
+        <div className="w-8 h-8 relative flex-shrink-0">
+          <Image
+            src={spriteData.spriteUrl}
+            alt={name}
+            fill
+            sizes="32px"
+            className="pixelated"
+            priority
+          />
+        </div>
+      )}
+      <div>
+        <div className="font-medium">{name}</div>
+        <div className="flex flex-wrap gap-1 mt-1">
+          {spriteData.types.map(type => (
+            <TypeBadge key={type} type={type} />
+          ))}
+        </div>
+      </div>
+    </div>
+  )
 }
 
 function UsageIndicator({ value }: { value: number }) {
@@ -142,27 +181,25 @@ export function StatsTable({ loading, statsData }: StatsTableProps) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[180px]">Pokemon</TableHead>
+                <TableHead className="w-[250px]">Pokemon</TableHead>
                 <TableHead className="w-[150px]">Usage</TableHead>
                 <TableHead className="w-[200px]">Most Used Ability</TableHead>
                 <TableHead className="w-[200px]">Most Used Item</TableHead>
-                <TableHead className="w-[200px]">Best Teammate</TableHead>
-                <TableHead className="w-[200px]">Top Counter</TableHead>
+                <TableHead className="w-[250px]">Best Teammate</TableHead>
+                <TableHead className="w-[250px]">Top Counter</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {statsData.map((row) => (
                 <TableRow key={row.pokemon}>
-                  <TableCell className="font-medium">
-                    <div className="flex items-center gap-2">
-                      <span>{row.pokemon}</span>
-                      <UsageIndicator value={row.averageUsage.percent} />
-                    </div>
+                  <TableCell>
+                    <PokemonDisplay name={row.pokemon} />
                   </TableCell>
                   <TableCell>
                     <div className="space-y-1">
-                      <div className="text-sm font-medium">
+                      <div className="text-sm font-medium flex items-center gap-2">
                         {(row.averageUsage.percent*100).toFixed(2)}%
+                        <UsageIndicator value={row.averageUsage.percent} />
                       </div>
                       <div className="text-xs text-muted-foreground">
                         {row.averageUsage.rawCount.toLocaleString()} battles
@@ -199,28 +236,14 @@ export function StatsTable({ loading, statsData }: StatsTableProps) {
                   </TableCell>
                   <TableCell>
                     {row.topTeammate ? (
-                      <div className="space-y-1">
-                        <div className="text-sm font-medium">
-                          {row.topTeammate.name}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {row.topTeammate.usage.toFixed(1)}% paired
-                        </div>
-                      </div>
+                      <PokemonDisplay name={row.topTeammate.name} />
                     ) : (
                       <span className="text-muted-foreground">No data</span>
                     )}
                   </TableCell>
                   <TableCell>
                     {row.bestCounter ? (
-                      <div className="space-y-1">
-                        <div className="text-sm font-medium">
-                          {row.bestCounter.name}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {row.bestCounter.winRate.toFixed(1)}% lose rate
-                        </div>
-                      </div>
+                      <PokemonDisplay name={row.bestCounter.name} />
                     ) : (
                       <span className="text-muted-foreground">No data</span>
                     )}
