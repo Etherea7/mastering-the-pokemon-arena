@@ -21,23 +21,26 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination"
 import { Loader2 } from "lucide-react"
+import { cn } from "@/lib/utils"
+
 
 interface PokemonSelectorProps {
-  selectedPokemon: string[]
-  onPokemonChange: (pokemon: string[]) => void
-  generation: string
-  battleFormat: string
-  startMonth: string
-  startYear: string
-  endMonth: string
-  endYear: string
-}
+    selectedPokemon: string[]
+    onPokemonChange: (pokemon: string[]) => void
+    generation: string
+    battleFormat: string
+    startMonth: string
+    startYear: string
+    endMonth: string
+    endYear: string
+  }
 
 interface PokemonData {
-  name: string
-  usedCount: number
-  spriteUrl?: string
-}
+    name: string
+    usedCount: number
+    spriteUrl?: string
+    types: string[]
+  }
 
 // Helper function to get sprite URL from PokeAPI
 function formatPokemonNameForApi(name: string): string {
@@ -155,108 +158,158 @@ function formatPokemonNameForApi(name: string): string {
   }
   
   // Modified getPokemonSprite function
-  async function getPokemonSprite(name: string): Promise<string> {
+  async function getPokemonData(name: string): Promise<{ spriteUrl: string, types: string[] }> {
     try {
       const formattedName = formatPokemonNameForApi(name);
       
-      // Attempt to fetch the Pokemon data
       const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${formattedName}`);
       
       if (!response.ok) {
-        // If the first attempt fails, try a fallback for certain forms
         const baseName = name.split('-')[0].toLowerCase();
         const fallbackResponse = await fetch(`https://pokeapi.co/api/v2/pokemon/${baseName}`);
         
         if (!fallbackResponse.ok) {
-          console.warn(`Sprite not found for ${name} (tried: ${formattedName} and ${baseName})`);
-          return '';
+          console.warn(`Pokemon data not found for ${name} (tried: ${formattedName} and ${baseName})`);
+          return { spriteUrl: '', types: [] };
         }
         
         const fallbackData = await fallbackResponse.json();
-        return fallbackData.sprites.front_default || '';
+        return {
+          spriteUrl: fallbackData.sprites.front_default || '',
+          types: fallbackData.types.map((t: any) => t.type.name)
+        };
       }
   
       const data = await response.json();
-      return data.sprites.front_default || '';
+      return {
+        spriteUrl: data.sprites.front_default || '',
+        types: data.types.map((t: any) => t.type.name)
+      };
     } catch (error) {
-      console.error(`Error fetching sprite for ${name}:`, error);
-      return '';
+      console.error(`Error fetching Pokemon data for ${name}:`, error);
+      return { spriteUrl: '', types: [] };
     }
   }
+  
+  // TypeBadge component for consistent type display
+  function TypeBadge({ type }: { type: string }) {
+    const colors = typeColors[type] || { bg: "bg-gray-500", text: "text-white" };
+    
+    return (
+      <Badge 
+        variant="secondary" 
+        className={cn(
+          "ml-1 text-xs capitalize",
+          colors.bg,
+          colors.text
+        )}
+      >
+        {type}
+      </Badge>
+    );
+  }
+  
+  // Type color mapping
+  const typeColors: { [key: string]: { bg: string, text: string } } = {
+    normal: { bg: "bg-gray-400", text: "text-white" },
+    fire: { bg: "bg-red-500", text: "text-white" },
+    water: { bg: "bg-blue-500", text: "text-white" },
+    electric: { bg: "bg-yellow-400", text: "text-black" },
+    grass: { bg: "bg-green-500", text: "text-white" },
+    ice: { bg: "bg-blue-200", text: "text-black" },
+    fighting: { bg: "bg-red-700", text: "text-white" },
+    poison: { bg: "bg-purple-500", text: "text-white" },
+    ground: { bg: "bg-amber-600", text: "text-white" },
+    flying: { bg: "bg-indigo-300", text: "text-black" },
+    psychic: { bg: "bg-pink-500", text: "text-white" },
+    bug: { bg: "bg-lime-500", text: "text-white" },
+    rock: { bg: "bg-yellow-700", text: "text-white" },
+    ghost: { bg: "bg-purple-700", text: "text-white" },
+    dragon: { bg: "bg-indigo-600", text: "text-white" },
+    dark: { bg: "bg-gray-700", text: "text-white" },
+    steel: { bg: "bg-gray-400", text: "text-white" },
+    fairy: { bg: "bg-pink-300", text: "text-black" },
+  };
+  
 
 export function PokemonSelector({
-  selectedPokemon,
-  onPokemonChange,
-  generation,
-  battleFormat,
-  startMonth,
-  startYear,
-  endMonth,
-  endYear
-}: PokemonSelectorProps) {
-  const [pokemonList, setPokemonList] = useState<PokemonData[]>([])
-  const [loading, setLoading] = useState(false)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 10
+    selectedPokemon,
+    onPokemonChange,
+    generation,
+    battleFormat,
+    startMonth,
+    startYear,
+    endMonth,
+    endYear
+  }: PokemonSelectorProps) {
+    const [pokemonList, setPokemonList] = useState<PokemonData[]>([])
+    const [loading, setLoading] = useState(false)
+    const [searchTerm, setSearchTerm] = useState('')
+    const [currentPage, setCurrentPage] = useState(1)
+    const itemsPerPage = 10
 
-  useEffect(() => {
-    const fetchPokemonList = async () => {
-      if (!generation || !battleFormat) return
-      
-      try {
-        setLoading(true)
-        const params = new URLSearchParams({
-          battle_format: battleFormat.toLowerCase(),
-          generation: generation,
-          year_month_gte: `${startYear}-${startMonth}`,
-          year_month_lte: `${endYear}-${endMonth}`,
-        })
-        const response = await fetch(`/api/pokemon/usage?${params}`)
-        const result = await response.json()
-        
-        if (result.data && Array.isArray(result.data)) {
-          // Group by Pokemon name and sum raw_counts
-          const pokemonMap = result.data.reduce((acc: Map<string, PokemonData>, item: any) => {
-            if (!acc.has(item.name)) {
-              acc.set(item.name, {
-                name: item.name,
-                usedCount: item.real_count || 0
-              })
-            } else {
-              const existing = acc.get(item.name)!
-              acc.set(item.name, {
-                ...existing,
-                usedCount: existing.usedCount + (item.real_count || 0)
-              })
+    useEffect(() => {
+        const fetchPokemonList = async () => {
+          if (!generation || !battleFormat) return
+          
+          try {
+            setLoading(true)
+            const params = new URLSearchParams({
+              battle_format: battleFormat.toLowerCase(),
+              generation: generation,
+              year_month_gte: `${startYear}-${startMonth}`,
+              year_month_lte: `${endYear}-${endMonth}`,
+            })
+            const response = await fetch(`/api/pokemon/usage?${params}`)
+            const result = await response.json()
+            
+            if (result.data && Array.isArray(result.data)) {
+              // Group by Pokemon name and sum raw_counts
+              const pokemonMap = result.data.reduce((acc: Map<string, PokemonData>, item: any) => {
+                if (!acc.has(item.name)) {
+                  acc.set(item.name, {
+                    name: item.name,
+                    usedCount: item.real_count || 0,
+                    types: []
+                  })
+                } else {
+                  const existing = acc.get(item.name)!
+                  acc.set(item.name, {
+                    ...existing,
+                    usedCount: existing.usedCount + (item.real_count || 0)
+                  })
+                }
+                return acc
+              }, new Map())
+    
+              // Convert to array and sort by usedCount
+              const aggregatedPokemon = Array.from(pokemonMap.values())
+                .sort((a, b) => b.usedCount - a.usedCount)
+    
+              // Fetch sprites and types for each Pokemon
+              const pokemonWithData = await Promise.all(
+                (aggregatedPokemon as PokemonData[]).map(async (pokemon: PokemonData) => {
+                  const data = await getPokemonData(pokemon.name)
+                  return {
+                    ...pokemon,
+                    spriteUrl: data.spriteUrl,
+                    types: data.types
+                  }
+                })
+              )
+    
+              setPokemonList(pokemonWithData)
             }
-            return acc
-          }, new Map())
-
-          // Convert to array and sort by usedCount
-          const aggregatedPokemon = Array.from(pokemonMap.values())
-            .sort((a, b) => b.usedCount - a.usedCount)
-
-          // Fetch sprites for each Pokemon
-          const pokemonWithSprites = await Promise.all(
-            aggregatedPokemon.map(async (pokemon) => ({
-              ...pokemon,
-              spriteUrl: await getPokemonSprite(pokemon.name)
-            }))
-          )
-
-          setPokemonList(pokemonWithSprites)
+          } catch (error) {
+            console.error('Error fetching Pokemon list:', error)
+            setPokemonList([])
+          } finally {
+            setLoading(false)
+          }
         }
-      } catch (error) {
-        console.error('Error fetching Pokemon list:', error)
-        setPokemonList([])
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchPokemonList()
-  }, [generation, battleFormat, startMonth, startYear, endMonth, endYear])
+    
+        fetchPokemonList()
+      }, [generation, battleFormat, startMonth, startYear, endMonth, endYear])
 
   const togglePokemon = (pokemonName: string) => {
     if (selectedPokemon.includes(pokemonName)) {
@@ -334,7 +387,8 @@ export function PokemonSelector({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[200px]">Pokemon</TableHead>
+                <TableHead className="w-[300px]">Pokemon</TableHead>
+                <TableHead className="w-[300px]">Types</TableHead>
                 <TableHead className="text-right">Used Count</TableHead>
               </TableRow>
             </TableHeader>
@@ -360,7 +414,13 @@ export function PokemonSelector({
                         />
                       </div>
                     )}
-                    {pokemon.name}
+                    <span>{pokemon.name}</span>
+                   
+                  </TableCell>
+                  <TableCell>
+                  {pokemon.types.map(type => (
+                      <TypeBadge key={type} type={type} />
+                    ))}
                   </TableCell>
                   <TableCell className="text-right">
                     {pokemon.usedCount.toLocaleString()}
