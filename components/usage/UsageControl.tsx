@@ -18,6 +18,8 @@ interface UsageControlsProps {
   setEndYear: (year: string) => void
   activePreset: number
   handlePresetClick: (top: number) => void
+  selectedRating?: number;
+  setSelectedRating: (rating: number | undefined) => void;
 }
 
 const years = ['2022','2023', '2024']
@@ -41,6 +43,8 @@ const generations = Array.from({ length: 9 }, (_, i) => ({
   label: `Generation ${i + 1}`
 }))
 
+const ratings = [0,1500, 1630, 1695,1760, 1825];
+
 export function UsageControls({
   selectedTier,
   setSelectedTier,
@@ -55,7 +59,9 @@ export function UsageControls({
   endYear,
   setEndYear,
   activePreset,
-  handlePresetClick
+  handlePresetClick,
+  selectedRating,
+  setSelectedRating,
 }: UsageControlsProps) {
   return (
     <Card className="mb-6">
@@ -147,6 +153,27 @@ export function UsageControls({
               </Select>
             </div>
           </div>
+
+          <div>
+            <label className="block mb-2">Rating</label>
+            <Select 
+              value={selectedRating?.toString() ?? ''} 
+              onValueChange={(value) => setSelectedRating(value ? parseInt(value) : undefined)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="All Ratings" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All Ratings</SelectItem>
+                {ratings.map(rating => (
+                  <SelectItem key={rating} value={rating.toString()}>
+                    {rating}+
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
         </div>
 
       </CardContent>

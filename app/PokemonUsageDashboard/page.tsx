@@ -22,6 +22,7 @@ export default function PokemonUsagePage() {
   const [activePreset, setActivePreset] = useState<number>(5)
   const [selectionMode, setSelectionMode] = useState<'preset' | 'custom'>('preset')
   const [customSelectedPokemon, setCustomSelectedPokemon] = useState<string[]>([])
+  const [selectedRating, setSelectedRating] = useState<number | undefined>(1500);
 
   const handlePresetClick = (top: number) => {
     if (top === activePreset) return
@@ -43,10 +44,18 @@ export default function PokemonUsagePage() {
     endYear,
     activePreset,
     customSelectedPokemon,
-    selectionMode
+    selectionMode,
+    rating: selectedRating
   })
 
-  const { statsData, loading: statsLoading } = usePokemonStats(selectedPokemon, selectedGeneration)
+  const { statsData, loading: statsLoading } = usePokemonStats(
+    selectedPokemon, 
+    selectedGeneration,
+    selectedTier,
+    selectedRating,
+    `${startYear}-${startMonth}`,
+    `${endYear}-${endMonth}`
+  );
 
   return (
     <ScrollArea className="h-[calc(100vh-2rem)] w-full">
@@ -72,6 +81,8 @@ export default function PokemonUsagePage() {
           setEndYear={setEndYear}
           activePreset={activePreset}
           handlePresetClick={handlePresetClick}
+          selectedRating={selectedRating}
+          setSelectedRating={setSelectedRating}
         />
 
         <Card className="mb-6">
@@ -79,7 +90,7 @@ export default function PokemonUsagePage() {
             <CardTitle>Pokemon Selection</CardTitle>
           </CardHeader>
           <CardContent>
-            <Tabs value={selectionMode} onValueChange={(value: 'preset' | 'custom') => setSelectionMode(value)}>
+            <Tabs value={selectionMode} onValueChange={(value: string) => setSelectionMode(value as 'preset' | 'custom')}>
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="preset">Preset Top Pokemon</TabsTrigger>
                 <TabsTrigger value="custom">Custom Selection</TabsTrigger>
@@ -109,6 +120,7 @@ export default function PokemonUsagePage() {
                     startYear={startYear}
                     endMonth={endMonth}
                     endYear={endYear}
+                    rating={selectedRating} 
                   />
               </TabsContent>
             </Tabs>

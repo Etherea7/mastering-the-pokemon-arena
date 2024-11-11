@@ -23,7 +23,6 @@ import {
 import { Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-
 interface PokemonSelectorProps {
     selectedPokemon: string[]
     onPokemonChange: (pokemon: string[]) => void
@@ -33,6 +32,7 @@ interface PokemonSelectorProps {
     startYear: string
     endMonth: string
     endYear: string
+    rating?: number  // Added rating
   }
 
 interface PokemonData {
@@ -240,7 +240,8 @@ export function PokemonSelector({
     startMonth,
     startYear,
     endMonth,
-    endYear
+    endYear,
+    rating
   }: PokemonSelectorProps) {
     const [pokemonList, setPokemonList] = useState<PokemonData[]>([])
     const [loading, setLoading] = useState(false)
@@ -259,6 +260,7 @@ export function PokemonSelector({
               generation: generation,
               year_month_gte: `${startYear}-${startMonth}`,
               year_month_lte: `${endYear}-${endMonth}`,
+              ...(rating !== undefined && { rating: rating.toString() }),
             })
             const response = await fetch(`/api/pokemon/usage?${params}`)
             const result = await response.json()
@@ -309,7 +311,7 @@ export function PokemonSelector({
         }
     
         fetchPokemonList()
-      }, [generation, battleFormat, startMonth, startYear, endMonth, endYear])
+      }, [generation, battleFormat, startMonth, startYear, endMonth, endYear, rating])
 
   const togglePokemon = (pokemonName: string) => {
     if (selectedPokemon.includes(pokemonName)) {

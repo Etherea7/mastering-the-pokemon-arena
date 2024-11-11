@@ -1,3 +1,4 @@
+// hooks/usePokemonUsage.ts
 import { useState, useEffect } from 'react'
 
 interface UsePokemonUsageProps {
@@ -10,6 +11,7 @@ interface UsePokemonUsageProps {
   activePreset: number
   customSelectedPokemon: string[]
   selectionMode: 'preset' | 'custom'
+  rating?: number  // Added rating parameter
 }
 
 export function usePokemonUsage({
@@ -21,9 +23,9 @@ export function usePokemonUsage({
   endYear,
   activePreset,
   customSelectedPokemon,
-  selectionMode
+  selectionMode,
+  rating           // Added rating parameter
 }: UsePokemonUsageProps) {
-  // Initialize with empty arrays to prevent undefined
   const [selectedPokemon, setSelectedPokemon] = useState<string[]>([])
   const [chartData, setChartData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -46,6 +48,7 @@ export function usePokemonUsage({
           generation: selectedGeneration,
           year_month_gte: `${startYear}-${startMonth}`,
           year_month_lte: `${endYear}-${endMonth}`,
+          ...(rating !== undefined && { rating: rating.toString() })
         })
         
         const response = await fetch(`/api/pokemon/usage?${params}`)
@@ -120,7 +123,6 @@ export function usePokemonUsage({
         }
       } catch (error) {
         console.error('Error fetching usage data:', error)
-        // Set empty arrays on error
         setSelectedPokemon([])
         setChartData([])
       } finally {
@@ -128,7 +130,8 @@ export function usePokemonUsage({
       }
     }
     fetchUsageData()
-  }, [selectedTier, selectedGeneration, startMonth, startYear, endMonth, endYear, activePreset, customSelectedPokemon, selectionMode])
+  }, [selectedTier, selectedGeneration, startMonth, startYear, endMonth, endYear, 
+      activePreset, customSelectedPokemon, selectionMode, rating]) // Added rating to dependencies
 
   return { selectedPokemon, chartData, loading }
 }
