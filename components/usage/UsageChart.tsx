@@ -24,6 +24,22 @@ export function UsageChart({ loading, chartData, selectedPokemon }: UsageChartPr
     )
   }
 
+  // Handle empty state
+  if (!selectedPokemon?.length) {
+    return (
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Pokemon Usage Over Time</CardTitle>
+        </CardHeader>
+        <CardContent className="h-[400px]">
+          <div className="h-full flex items-center justify-center text-muted-foreground">
+            No Pokemon selected. Please select Pokemon to view usage data.
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
   return (
     <Card className="mb-6">
       <CardHeader>
@@ -70,7 +86,7 @@ export function UsageChart({ loading, chartData, selectedPokemon }: UsageChartPr
                               />
                               <span className="text-sm font-medium">{entry.name}:</span>
                               <span className="text-sm">
-                                {entry.value ? `${entry.value.toFixed(4)*100}%` : 'No data'}
+                                {entry.value ? `${(entry.value*100).toFixed(2)}%` : 'No data'}
                               </span>
                             </div>
                           ))}
@@ -88,7 +104,7 @@ export function UsageChart({ loading, chartData, selectedPokemon }: UsageChartPr
                 <span className="text-sm font-medium">{value}</span>
               )}
             />
-            {selectedPokemon.map((pokemon, index) => (
+            {(selectedPokemon || []).map((pokemon, index) => (
               <Line 
                 key={pokemon} 
                 type="monotone" 

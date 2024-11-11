@@ -149,20 +149,6 @@ export function UsageControls({
           </div>
         </div>
 
-        <div className="mt-4">
-          <label className="block mb-2">Preset Options</label>
-          <div className="flex space-x-2">
-            {[5, 10, 15].map((preset) => (
-              <Button 
-                key={preset}
-                onClick={() => handlePresetClick(preset)} 
-                variant={activePreset === preset ? "default" : "outline"}
-              >
-                Top {preset}
-              </Button>
-            ))}
-          </div>
-        </div>
       </CardContent>
     </Card>
   )

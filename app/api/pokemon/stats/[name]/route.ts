@@ -13,11 +13,11 @@ export async function GET(
     }
 
     // Convert to proper case: first letter uppercase, rest lowercase
-    const formattedName = pokemonName.charAt(0).toUpperCase() + pokemonName.slice(1).toLowerCase();
+    // const formattedName = pokemonName.charAt(0).toUpperCase() + pokemonName.slice(1).toLowerCase();
 
     const pokemon = await prisma.pokemonBase.findFirst({
       where: {
-        name: formattedName,
+        name: pokemonName,
       }
     });
 

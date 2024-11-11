@@ -51,7 +51,8 @@ export async function GET(request: Request) {
         usage_percent: true,
         year_month: true,
         battle_format: true,
-        generation: true
+        generation: true,
+        real_count: true,
       },
       orderBy: [
         { year_month: 'asc' },
