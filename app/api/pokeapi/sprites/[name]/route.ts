@@ -131,7 +131,7 @@ export async function GET(
     const formattedName = formatPokemonNameForApi(pokemonName)
     
     // Try to fetch the Pokemon data with the formatted name
-    let response = await fetch(`https://pokeapi.co/api/v2/pokemon/${formattedName}`)
+    let response = await fetch(`https://pokeapi.co/api/v2/pokemon/${formattedName.toLowerCase()}`)
     
     // If not found, try with the base form
     if (!response.ok) {

@@ -43,15 +43,23 @@ interface PokemonData {
   }
 
 // Helper function to get sprite URL from PokeAPI
+function chunkArray<T>(array: T[], size: number): T[][] {
+    const chunks: T[][] = [];
+    for (let i = 0; i < array.length; i += size) {
+      chunks.push(array.slice(i, i + size));
+    }
+    return chunks;
+  }
   
+  // Helper function to add delay between requests
+  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
   // Modified getPokemonSprite function
-  async function getPokemonData(name: string): Promise<{ spriteUrl: string, types: string[] }> {
+  async function getPokemonData(name: string, retries = 3): Promise<{ spriteUrl: string, types: string[] }> {
     try {
       const response = await fetch(`/api/pokeapi/sprites/${encodeURIComponent(name)}`);
       
       if (!response.ok) {
-        console.warn(`Pokemon data not found for ${name}`);
-        return { spriteUrl: '', types: [] };
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
       
       const data = await response.json();
@@ -60,6 +68,10 @@ interface PokemonData {
         types: data.types
       };
     } catch (error) {
+      if (retries > 0) {
+        await delay(1000); // Wait 1 second before retrying
+        return getPokemonData(name, retries - 1);
+      }
       console.error(`Error fetching Pokemon data for ${name}:`, error);
       return { spriteUrl: '', types: [] };
     }
@@ -162,20 +174,40 @@ export function PokemonSelector({
               const aggregatedPokemon = Array.from(pokemonMap.values())
                 .sort((a, b) => b.usedCount - a.usedCount)
     
-              // Fetch sprites and types for each Pokemon
-              const pokemonWithData = await Promise.all(
-                (aggregatedPokemon as PokemonData[]).map(async (pokemon: PokemonData) => {
-                  const data = await getPokemonData(pokemon.name)
-                  return {
-                    ...pokemon,
-                    spriteUrl: data.spriteUrl,
-                    types: data.types
-                  }
-                })
-              )
-    
-              setPokemonList(pokemonWithData)
-            }
+                setPokemonList(aggregatedPokemon)
+
+                // Fetch sprites in batches
+                const BATCH_SIZE = 5;
+                const DELAY_BETWEEN_BATCHES = 500; // 500ms delay between batches
+                
+                const pokemonChunks = chunkArray(aggregatedPokemon, BATCH_SIZE);
+                
+                for (const chunk of pokemonChunks) {
+                  const updatedPokemonData = await Promise.all(
+                    chunk.map(async (pokemon) => {
+                      const data = await getPokemonData(pokemon.name);
+                      return {
+                        ...pokemon,
+                        spriteUrl: data.spriteUrl,
+                        types: data.types
+                      };
+                    })
+                  );
+                  
+                  setPokemonList(currentList => {
+                    const newList = [...currentList];
+                    updatedPokemonData.forEach(updatedPokemon => {
+                      const index = newList.findIndex(p => p.name === updatedPokemon.name);
+                      if (index !== -1) {
+                        newList[index] = updatedPokemon;
+                      }
+                    });
+                    return newList;
+                  });
+                  
+                  await delay(DELAY_BETWEEN_BATCHES);
+                }
+              }
           } catch (error) {
             console.error('Error fetching Pokemon list:', error)
             setPokemonList([])
