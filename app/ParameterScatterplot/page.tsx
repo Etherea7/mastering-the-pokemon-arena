@@ -1,131 +1,67 @@
 'use client'
 
-import React, { useState, useEffect } from 'react';
-import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState } from 'react'
+import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+
+const tierData = {
+  'Tier 1': [
+    { speed: 10, attack: 20, hp: 100, defence: 15 },
+    { speed: 15, attack: 25, hp: 90, defence: 20 },
+    { speed: 20, attack: 15, hp: 110, defence: 10 },
+    { speed: 12, attack: 18, hp: 95, defence: 18 },
+    { speed: 18, attack: 22, hp: 105, defence: 12 },
+  ],
+  'Tier 2': [
+    { speed: 25, attack: 30, hp: 120, defence: 25 },
+    { speed: 30, attack: 35, hp: 110, defence: 30 },
+    { speed: 35, attack: 25, hp: 130, defence: 20 },
+    { speed: 28, attack: 32, hp: 115, defence: 28 },
+    { speed: 32, attack: 28, hp: 125, defence: 22 },
+  ],
+  'Tier 3': [
+    { speed: 40, attack: 45, hp: 140, defence: 35 },
+    { speed: 45, attack: 40, hp: 150, defence: 30 },
+    { speed: 50, attack: 35, hp: 160, defence: 25 },
+    { speed: 42, attack: 43, hp: 145, defence: 33 },
+    { speed: 48, attack: 38, hp: 155, defence: 28 },
+  ],
+}
+
+const data = {
+  'All Tiers': [...tierData['Tier 1'], ...tierData['Tier 2'], ...tierData['Tier 3']],
+  ...tierData
+}
 
 const scatterPlotParameters = [
   { label: 'Speed vs Attack', x: 'speed', y: 'attack' },
-  { label: 'HP vs Defence', x: 'hp', y: 'defense' }
-];
+  { label: 'HP vs Defence', x: 'hp', y: 'defence' },
+]
 
 const colors = {
-  'ou': "#8884d8",
-  'uu': "#82ca9d",
-  'ru': "#ffc658",
-  'nu': "#ff7300",
-  'pu': "#ff5252"
-};
+  'Tier 1': "#8884d8",
+  'Tier 2': "#82ca9d",
+  'Tier 3': "#ffc658"
+}
 
-export default function PokemonStatsVisualizer() {
-  const [pokemonData, setPokemonData] = useState<any>({});
-  const [selectedTier, setSelectedTier] = useState('All Tiers');
-  const [selectedParameter, setSelectedParameter] = useState(scatterPlotParameters[0]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // First get all Pokemon names from your existing API
-        const response = await fetch('/api/pokemon');
-        const pokemonList = await response.json();
-        
-        if (!Array.isArray(pokemonList)) {
-          throw new Error('Unexpected data format from API');
-        }
-
-        // Fetch base stats for each Pokemon using their names
-        const baseStatsPromises = pokemonList.map(async (pokemonName) => {
-          try {
-            const response = await fetch(`/api/pokemon/${pokemonName}`);
-            const data = await response.json();
-            return data.base;  // Get base data including battle_format and raw_count
-          } catch (error) {
-            console.error(`Error fetching ${pokemonName}:`, error);
-            return null;
-          }
-        });
-
-        const pokemonBaseData = (await Promise.all(baseStatsPromises)).filter(Boolean);
-
-        // Fetch detailed stats from PokeAPI for each Pokemon
-        const pokemonWithStats = await Promise.all(
-          pokemonBaseData.map(async (pokemon) => {
-            if (!pokemon || !pokemon.name) return null;
-
-            try {
-              const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${pokemon.name.toLowerCase()}`);
-              if (!response.ok) return null;
-              
-              const pokeData = await response.json();
-              const stats = pokeData.stats.reduce((acc: any, stat: any) => {
-                acc[stat.stat.name] = stat.base_stat;
-                return acc;
-              }, {});
-
-              return {
-                name: pokemon.name,
-                tier: pokemon.battle_format?.toLowerCase() || 'unknown',
-                hp: stats.hp,
-                attack: stats.attack,
-                defense: stats.defense,
-                speed: stats.speed,
-                usage: pokemon.raw_count || 0
-              };
-            } catch (error) {
-              console.error(`Error fetching stats for ${pokemon.name}:`, error);
-              return null;
-            }
-          })
-        );
-
-        // Filter out nulls and group by tier
-        const validPokemon = pokemonWithStats.filter(Boolean);
-        
-        const groupedData = validPokemon.reduce((acc: any, pokemon) => {
-          if (!pokemon) return acc;
-          
-          const tier = pokemon.tier;
-          if (!acc[tier]) {
-            acc[tier] = [];
-          }
-          acc[tier].push(pokemon);
-          return acc;
-        }, {});
-
-        // Add "All Tiers" category
-        groupedData['All Tiers'] = validPokemon;
-
-        console.log('Grouped data:', groupedData);
-        setPokemonData(groupedData);
-        setLoading(false);
-      } catch (error) {
-        console.error('Error fetching Pokemon data:', error);
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
+export default function Component() {
+  const [selectedTier, setSelectedTier] = useState('All Tiers')
+  const [selectedParameter, setSelectedParameter] = useState(scatterPlotParameters[0])
 
   const handleTierChange = (value: string) => {
-    setSelectedTier(value);
-  };
+    setSelectedTier(value)
+  }
 
   const handleParameterChange = (value: string) => {
-    setSelectedParameter(scatterPlotParameters.find(param => param.label === value) || scatterPlotParameters[0]);
-  };
-
-  if (loading) {
-    return <div>Loading...</div>;
+    setSelectedParameter(scatterPlotParameters.find(param => param.label === value) || scatterPlotParameters[0])
   }
 
   return (
     <div className="container mx-auto p-4 space-y-6 min-h-screen pb-12">
       <Card className="w-full">
         <CardHeader>
-          <CardTitle>Pokemon Stats Visualizer</CardTitle>
+          <CardTitle>Character Stats Visualizer</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="w-full h-[500px]">
@@ -151,40 +87,18 @@ export default function PokemonStatsVisualizer() {
                   name={selectedParameter.y.toUpperCase()} 
                   label={{ value: selectedParameter.y.toUpperCase(), angle: -90, position: 'insideLeft' }}
                 />
-                <Tooltip 
-                  cursor={{ strokeDasharray: '3 3' }}
-                  content={({ active, payload }) => {
-                    if (active && payload && payload.length) {
-                      const pokemon = payload[0].payload;
-                      return (
-                        <div className="bg-white p-2 border rounded shadow">
-                          <p className="font-bold">{pokemon.name.toUpperCase()}</p>
-                          <p>{`${selectedParameter.x}: ${pokemon[selectedParameter.x]}`}</p>
-                          <p>{`${selectedParameter.y}: ${pokemon[selectedParameter.y]}`}</p>
-                          <p>{`Usage: ${pokemon.usage}`}</p>
-                        </div>
-                      );
-                    }
-                    return null;
-                  }}
-                />
+                <Tooltip cursor={{ strokeDasharray: '3 3' }} />
                 {selectedTier === 'All Tiers' ? (
-                  Object.entries(pokemonData)
-                    .filter(([tier]) => tier !== 'All Tiers')
-                    .map(([tier, data]) => (
-                      <Scatter 
-                        key={tier} 
-                        name={tier.toUpperCase()} 
-                        data={data} 
-                        fill={colors[tier as keyof typeof colors]} 
-                      />
-                    ))
+                  Object.entries(tierData).map(([tier, tierData]) => (
+                    <Scatter 
+                      key={tier} 
+                      name={tier} 
+                      data={tierData} 
+                      fill={colors[tier as keyof typeof colors] || "#8884d8"} 
+                    />
+                  ))
                 ) : (
-                  <Scatter 
-                    name={selectedTier} 
-                    data={pokemonData[selectedTier]} 
-                    fill={colors[selectedTier.toLowerCase() as keyof typeof colors] || "#8884d8"} 
-                  />
+                  <Scatter name={selectedTier} data={data[selectedTier as keyof typeof data]} fill={colors[selectedTier as keyof typeof colors] || "#8884d8"} />
                 )}
               </ScatterChart>
             </ResponsiveContainer>
@@ -194,7 +108,7 @@ export default function PokemonStatsVisualizer() {
               {Object.entries(colors).map(([tier, color]) => (
                 <div key={tier} className="flex items-center">
                   <div className="w-4 h-4 mr-2" style={{ backgroundColor: color }}></div>
-                  <span>{tier.toUpperCase()}</span>
+                  <span>{tier}</span>
                 </div>
               ))}
             </div>
@@ -215,9 +129,9 @@ export default function PokemonStatsVisualizer() {
                   <SelectValue placeholder="Select a tier" />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.keys(pokemonData).map((tier) => (
+                  {Object.keys(data).map((tier) => (
                     <SelectItem key={tier} value={tier}>
-                      {tier === 'All Tiers' ? tier : tier.toUpperCase()}
+                      {tier}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -242,5 +156,5 @@ export default function PokemonStatsVisualizer() {
         </CardContent>
       </Card>
     </div>
-  );
+  )
 }
