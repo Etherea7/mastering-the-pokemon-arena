@@ -31,5 +31,11 @@ export const navItems: NavItem[] = [
     icon: 'dashboard',
     label: 'PokemonTeamChooser'
   },
+  {
+    title: 'Usage Dashboard',
+    href: '/PokemonUsageDashboard',
+    icon: 'dashboard',
+    label: 'PokemomUsageDashboard'
+  },
   
 ];

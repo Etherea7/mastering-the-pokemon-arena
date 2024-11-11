@@ -37,9 +37,11 @@ next-env.d.ts
 #csvs
 prisma/sqldata/*.csv
 
-pokemon_data.db
+# pokemon_data.db
 prisma/pokemon_data.db
 *.db
 /prisma/*.db
 
 package-lock.json
+
+prisma\pokemondata_sqlite3.py
