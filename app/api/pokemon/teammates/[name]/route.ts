@@ -9,8 +9,6 @@ const errorResponse = (message: string, status = 400) =>
 const querySchema = z.object({
   generation: z.string(),
   battle_format: z.string(),
-  start_date: z.string().optional(),
-  end_date: z.string().optional(),
 });
 
 export async function GET(
@@ -22,61 +20,44 @@ export async function GET(
     const query = querySchema.parse({
       generation: searchParams.get('generation'),
       battle_format: searchParams.get('battle_format'),
-      start_date: searchParams.get('start_date'),
-      end_date: searchParams.get('end_date'),
     });
 
-    let whereClause: any = {
-      name: params.name,
-      generation: query.generation,
-      battle_format: query.battle_format,
-    };
-
-    // Add date range if provided
-    if (query.start_date || query.end_date) {
-      whereClause.year_month = {};
-      if (query.start_date) whereClause.year_month.gte = query.start_date;
-      if (query.end_date) whereClause.year_month.lte = query.end_date;
-    }
-
-    const teammates = await prisma.pokemonTeammates.findMany({
-      where: whereClause,
-      select: {
-        teammate: true,
+    // Get teammates with averaged usage rates
+    const teammates = await prisma.pokemonTeammates.groupBy({
+      by: ['teammate'],
+      where: {
+        name: params.name,
+        generation: query.generation,
+        battle_format: query.battle_format,
+      },
+      _avg: {
         usage: true,
-        year_month: true
       },
       orderBy: {
-        usage: 'desc'
+        _avg: {
+          usage: 'desc'
+        }
+      },
+      having: {
+        usage: {
+          _avg: {
+            gt: 0  // Filter out zero usage
+          }
+        }
       }
     });
 
-    // Group by teammate and take highest usage
-    const teammateMap = new Map();
-    teammates.forEach(t => {
-      if (!teammateMap.has(t.teammate) || teammateMap.get(t.teammate).usage < t.usage) {
-        teammateMap.set(t.teammate, {
-          name: t.teammate,
-          usage: t.usage ? Number(t.usage.toFixed(2)) : 0,
-          year_month: t.year_month
-        });
-      }
-    });
-
-    // Convert map to array and sort by usage
-    const uniqueTeammates = Array.from(teammateMap.values())
-      .sort((a, b) => b.usage - a.usage)
-      .slice(0, 10);
+    // Transform the data to match expected format
+    const formattedTeammates = teammates.map(t => ({
+      name: t.teammate,
+      usage: Number((t._avg.usage || 0).toFixed(2))
+    }));
 
     return successResponse({
       pokemon: params.name,
       generation: query.generation,
       battle_format: query.battle_format,
-      date_range: {
-        start: query.start_date || 'any',
-        end: query.end_date || 'any'
-      },
-      teammates: uniqueTeammates
+      teammates: formattedTeammates
     });
 
   } catch (error) {

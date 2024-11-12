@@ -1,50 +1,9 @@
 import { prisma } from '@/lib/prisma'
 import { NextRequest } from 'next/server'
 import { errorResponse, successResponse } from '@/lib/api'
+import { z } from 'zod'  
 
 const POKEMON_FORM_MAPPING: Record<string, string[]> = {
-  // Mega Evolutions
-  'abomasnow': ['abomasnow', 'abomasnow-mega'],
-  'absol': ['absol', 'absol-mega'],
-  'aerodactyl': ['aerodactyl', 'aerodactyl-mega'],
-  'aggron': ['aggron', 'aggron-mega'],
-  'alakazam': ['alakazam', 'alakazam-mega'],
-  'altaria': ['altaria', 'altaria-mega'],
-  'ampharos': ['ampharos', 'ampharos-mega'],
-  'banette': ['banette', 'banette-mega'],
-  'blastoise': ['blastoise', 'blastoise-mega'],
-  'blaziken': ['blaziken', 'blaziken-mega'],
-  'charizard': ['charizard', 'charizard-mega-x', 'charizard-mega-y'],
-  'garchomp': ['garchomp', 'garchomp-mega'],
-  'gardevoir': ['gardevoir', 'gardevoir-mega'],
-  'gengar': ['gengar', 'gengar-mega'],
-  'gyarados': ['gyarados', 'gyarados-mega'],
-  'heracross': ['heracross', 'heracross-mega'],
-  'houndoom': ['houndoom', 'houndoom-mega'],
-  'kangaskhan': ['kangaskhan', 'kangaskhan-mega'],
-  'latias': ['latias', 'latias-mega'],
-  'latios': ['latios', 'latios-mega'],
-  'lopunny': ['lopunny', 'lopunny-mega'],
-  'lucario': ['lucario', 'lucario-mega'],
-  'manectric': ['manectric', 'manectric-mega'],
-  'mawile': ['mawile', 'mawile-mega'],
-  'medicham': ['medicham', 'medicham-mega'],
-  'metagross': ['metagross', 'metagross-mega'],
-  'mewtwo': ['mewtwo', 'mewtwo-mega-x', 'mewtwo-mega-y'],
-  'pidgeot': ['pidgeot', 'pidgeot-mega'],
-  'pinsir': ['pinsir', 'pinsir-mega'],
-  'rayquaza': ['rayquaza', 'rayquaza-mega'],
-  'sableye': ['sableye', 'sableye-mega'],
-  'salamence': ['salamence', 'salamence-mega'],
-  'sceptile': ['sceptile', 'sceptile-mega'],
-  'scizor': ['scizor', 'scizor-mega'],
-  'sharpedo': ['sharpedo', 'sharpedo-mega'],
-  'slowbro': ['slowbro', 'slowbro-mega'],
-  'steelix': ['steelix', 'steelix-mega'],
-  'swampert': ['swampert', 'swampert-mega'],
-  'tyranitar': ['tyranitar', 'tyranitar-mega'],
-  'venusaur': ['venusaur', 'venusaur-mega'],
-
   // Special Forms
   'aegislash': ['aegislash-shield', 'aegislash-blade'],
   'basculin': ['basculin-red-striped', 'basculin-blue-striped'],
@@ -75,9 +34,29 @@ const POKEMON_FORM_MAPPING: Record<string, string[]> = {
   'zygarde': ['zygarde-50', 'zygarde-10', 'zygarde-complete']
 };
 
+// Query parameter validation schema that makes all fields optional
+const querySchema = z.object({
+  battle_format: z.string().optional(),
+  generation: z.string().optional(),
+}).optional();
+
 export async function GET(request: NextRequest) {
   try {
+    // Get query parameters if they exist
+    const searchParams = request.nextUrl.searchParams;
+    const params = Object.fromEntries(searchParams);
+    
+    // Build where clause only if parameters exist
+    const where: any = {};
+    if (Object.keys(params).length > 0) {
+      const query = querySchema.parse(params);
+      if (query?.battle_format) where.battle_format = query.battle_format;
+      if (query?.generation) where.generation = query.generation;
+    }
+
+    // Get distinct Pokemon names that match the criteria
     const uniquePokemon = await prisma.pokemonBase.findMany({
+      where,
       distinct: ['name'],
       select: { name: true },
       orderBy: { name: 'asc' }
@@ -101,6 +80,9 @@ export async function GET(request: NextRequest) {
     
     return successResponse(sortedList);
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return errorResponse('Invalid parameters provided');
+    }
     return errorResponse(`Failed to fetch Pokemon list: ${error.message}`);
   }
 }
