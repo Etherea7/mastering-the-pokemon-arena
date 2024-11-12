@@ -74,22 +74,22 @@ function TypeBadge({ type }: { type: string }) {
 
 function PokemonDisplay({ pokemon }: { pokemon: Pokemon }) {
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-col items-center">
       {pokemon.sprite && (
-        <div className="w-8 h-8 relative flex-shrink-0">
+        <div className="w-full aspect-square relative">
           <Image
             src={pokemon.sprite}
             alt={pokemon.name}
             fill
-            sizes="32px"
+            sizes="100%"
             className="pixelated"
             priority
           />
         </div>
       )}
-      <div>
+      <div className="w-full text-center mt-2">
         <div className="font-medium capitalize">{pokemon.name}</div>
-        <div className="flex flex-wrap gap-1">
+        <div className="flex flex-wrap justify-center gap-1 mt-1">
           {pokemon.types.map(type => (
             <TypeBadge key={type} type={type} />
           ))}
@@ -217,7 +217,7 @@ export function TypeStatsTable({ pokemonData, loading }: StatsTableProps) {
           {Object.entries(highestStats).map(([stat, pokemon]) => (
             <Card key={stat}>
               <CardHeader className="p-3">
-                <CardTitle className="text-sm">
+                <CardTitle className="text-sm text-center">
                   Highest {stat.split('_').map(word => 
                     word.charAt(0).toUpperCase() + word.slice(1)
                   ).join(' ')}
@@ -225,7 +225,7 @@ export function TypeStatsTable({ pokemonData, loading }: StatsTableProps) {
               </CardHeader>
               <CardContent className="p-3">
                 <PokemonDisplay pokemon={pokemon} />
-                <div className="text-sm font-medium mt-2">
+                <div className="text-sm font-medium mt-2 text-center">
                   Value: {pokemon.stats[stat as keyof typeof pokemon.stats]}
                 </div>
               </CardContent>

@@ -1,13 +1,15 @@
 // components/generation/StatAnalysis.tsx
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import * as d3 from 'd3';
+import {typeColors} from '@/constants/gendata';
+import { cn } from "@/lib/utils";
 
 interface Pokemon {
   id: number;
   name: string;
-  types: string[];
+  types: PokemonType[];
   stats: {
     hp: number;
     attack: number;
@@ -24,26 +26,33 @@ interface StatsComparisonProps {
   loading: boolean;
 }
 
-const typeColors = {
-  normal: "#A8A878",
-  fire: "#F08030",
-  water: "#6890F0",
-  electric: "#F8D030",
-  grass: "#78C850",
-  ice: "#98D8D8",
-  fighting: "#C03028",
-  poison: "#A040A0",
-  ground: "#E0C068",
-  flying: "#A890F0",
-  psychic: "#F85888",
-  bug: "#A8B820",
-  rock: "#B8A038",
-  ghost: "#705898",
-  dragon: "#7038F8",
-  dark: "#705848",
-  steel: "#B8B8D0",
-  fairy: "#EE99AC"
-};
+
+interface TypeStats {
+  type: PokemonType;
+  attack: number;
+  defense: number;
+  hp: number;
+  specialAttack: number;
+  specialDefense: number;
+  speed: number;
+  attackRank: number;
+  defenseRank: number;
+  hpRank: number;
+  specialAttackRank: number;
+  specialDefenseRank: number;
+  speedRank: number;
+  [key: string]: number | PokemonType;
+}
+
+
+interface StatsComparisonProps {
+  pokemonData: Pokemon[];
+  selectedGen: string;
+  loading: boolean;
+}
+
+type PokemonType = keyof typeof typeColors;
+
 
 const LoadingSkeleton = () => (
   <Card>
@@ -63,10 +72,46 @@ export const StatsComparisonChart = ({
 }: StatsComparisonProps) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [hoveredType, setHoveredType] = useState<string | null>(null);
 
-  const calculateTypeStats = () => {
+  const positionTooltip = useCallback((event: MouseEvent) => {
+    const tooltip = tooltipRef.current;
+    const container = containerRef.current;
+    if (!tooltip || !container) return;
+  
+    const containerRect = container.getBoundingClientRect();
+    const tooltipRect = tooltip.getBoundingClientRect();
+    const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+    const padding = 10;
+  
+    // Calculate position relative to the viewport
+    let left = event.pageX - containerRect.left - scrollLeft + padding;
+    let top = event.pageY - containerRect.top - scrollTop - tooltipRect.height / 2;
+  
+    // Adjust for right edge
+    if (left + tooltipRect.width > containerRect.width) {
+      left = event.pageX - containerRect.left - scrollLeft - tooltipRect.width - padding;
+    }
+  
+    // Adjust for bottom edge
+    if (top + tooltipRect.height > containerRect.height) {
+      top = containerRect.height - tooltipRect.height - padding;
+    }
+  
+    // Adjust for top edge
+    if (top < padding) {
+      top = padding;
+    }
+  
+    tooltip.style.left = `${left}px`;
+    tooltip.style.top = `${top}px`;
+  }, []);
+
+
+  const calculateTypeStats = useCallback(() => {
     const typeStats: { [key: string]: {
       count: number;
       totalStats: {
@@ -130,11 +175,11 @@ export const StatsComparisonChart = ({
     });
 
     return rankings;
-  };
+  },[pokemonData]);
 
   useEffect(() => {
     if (loading || !svgRef.current) return;
-
+    
     const statsData = calculateTypeStats();
     const margin = { top: 50, right: 50, bottom: 30, left: 50 };
     const width = svgRef.current.clientWidth - margin.left - margin.right;
@@ -150,9 +195,9 @@ export const StatsComparisonChart = ({
       .attr("transform", `translate(${margin.left},${margin.top})`);
 
     const dimensions = [
+      { name: "HP", key: "hpRank" },
       { name: "Attack", key: "attackRank" },
       { name: "Defense", key: "defenseRank" },
-      { name: "HP", key: "hpRank" },
       { name: "Sp.Attack", key: "specialAttackRank" },
       { name: "Sp.Defense", key: "specialDefenseRank" },
       { name: "Speed", key: "speedRank" }
@@ -186,20 +231,19 @@ export const StatsComparisonChart = ({
     });
 
     // Create the path generator
-    const line = d3.line()
+    const line = d3.line<[number, number]>()
       .defined(d => !isNaN(d[1]))
       .x(d => d[0])
       .y(d => d[1]);
 
     // Add paths
-    statsData.forEach(d => {
-      const typeColor = typeColors[(d.type.toLowerCase())];
-      const pathData = dimensions.map(dimension => [
-        x(dimension.name),
-        y(d[dimension.key])
+    statsData.forEach((d: TypeStats) => {
+      const typeColor = typeColors[d.type].color; // Now accessing the color property
+      const pathData: [number, number][] = dimensions.map(dimension => [
+        x(dimension.name) ?? 0,
+        y(d[dimension.key as keyof TypeStats] as number)
       ]);
-
-      // Add path
+  
       svg.append("path")
         .datum(pathData)
         .attr("class", `type-path-${d.type}`)
@@ -207,8 +251,8 @@ export const StatsComparisonChart = ({
         .attr("stroke", typeColor)
         .attr("stroke-width", 3)
         .attr("opacity", 0.7)
-        .attr("d", line)
-        .on("mouseover", function(event) {
+        .attr("d", line as any)
+        .on("mouseover", function(event: MouseEvent) {
           setHoveredType(d.type);
           d3.select(this)
             .attr("stroke-width", 4)
@@ -216,78 +260,82 @@ export const StatsComparisonChart = ({
 
           // Show tooltip
           const tooltip = d3.select(tooltipRef.current);
-          tooltip.style("opacity", 1)
-            .style("left", `${event.pageX + 10}px`)
-            .style("top", `${event.pageY - 10}px`)
-            .html(`
-              <div class="bg-white border rounded-lg shadow-lg p-2">
-                <div class="font-medium" style="color: ${typeColor}">${d.type}</div>
-                ${dimensions.map(dim => 
-                  `<div class="text-sm">
-                    ${dim.name}: Rank ${d[dim.key]}
-                  </div>`
-                ).join('')}
-              </div>
-            `);
-        })
-        .on("mouseout", function() {
-          setHoveredType(null);
-          d3.select(this)
-            .attr("stroke-width", selectedType === d.type ? 4 : 3)
-            .attr("opacity", selectedType === d.type ? 1 : 0.7);
-          
-          d3.select(tooltipRef.current)
-            .style("opacity", 0);
-        })
-        .on("click", function() {
-          setSelectedType(selectedType === d.type ? null : d.type);
-          d3.selectAll(".type-path")
-            .attr("stroke-width", 3)
-            .attr("opacity", 0.7);
-          d3.select(this)
-            .attr("stroke-width", 4)
-            .attr("opacity", 1);
-        });
+            tooltip.style("opacity", 1)
+              .html(`
+                <div class="flex flex-col gap-2 min-w-[200px]">
+                  <div class="flex items-center gap-2 pb-2 border-b">
+                    <div class="w-3 h-3 rounded-full" style="background-color: ${typeColor}"></div>
+                    <span class="font-medium">${d.type}</span>
+                  </div>
+                  <div class="grid grid-cols-2 gap-x-4 gap-y-1">
+                    ${dimensions.map(dim => {
+                      const rankValue = d[dim.key];
+                      const statKey = dim.key.replace('Rank', '');
+                      const actualValue = d[statKey];
+                      return `
+                        <div class="text-sm font-medium">${dim.name}:</div>
+                        <div class="text-sm">
+                          <span class="font-medium text-primary">#${rankValue}</span>
+                          <span class="text-muted-foreground"> (${actualValue})</span>
+                        </div>
+                      `;
+                    }).join('')}
+                  </div>
+                </div>
+              `);
+            
+            positionTooltip(event);
+          })
+          .on("mousemove", function(event: MouseEvent) {
+            positionTooltip(event);
+          });
 
       // Add points
       dimensions.forEach(dimension => {
         svg.append("circle")
           .attr("class", `type-point-${d.type}`)
           .attr("cx", x(dimension.name) ?? 0)
-          .attr("cy", y(d[dimension.key]))
+          .attr("cy", y(d[dimension.key as keyof TypeStats] as number))
           .attr("r", 6)
           .attr("fill", typeColor)
           .attr("stroke", "#fff")
           .attr("stroke-width", 2)
           .style("cursor", "pointer")
-          .on("mouseover", function(event) {
+          .on("mouseover", function(event: MouseEvent) {
             d3.select(`.type-path-${d.type}`)
               .attr("stroke-width", 4)
               .attr("opacity", 1);
             
-            // Show tooltip
             const tooltip = d3.select(tooltipRef.current);
+            const rankValue = d[dimension.key];
+            const statKey = dimension.key.replace('Rank', '');
+            const actualValue = d[statKey];
+            
             tooltip.style("opacity", 1)
-              .style("left", `${event.pageX + 10}px`)
-              .style("top", `${event.pageY - 10}px`)
               .html(`
-                <div class="bg-white border rounded-lg shadow-lg p-2">
-                  <div class="font-medium" style="color: ${typeColor}">${d.type}</div>
-                  <div class="text-sm">${dimension.name}: Rank ${d[dimension.key]}</div>
+                <div class="flex flex-col gap-2 min-w-[200px]">
+                  <div class="flex items-center gap-2 pb-2 border-b">
+                    <div class="w-3 h-3 rounded-full" style="background-color: ${typeColor}"></div>
+                    <span class="font-medium">${d.type}</span>
+                  </div>
+                  <div class="grid grid-cols-2 gap-x-4">
+                    <div class="text-sm font-medium">${dimension.name}:</div>
+                    <div class="text-sm">
+                      <span class="font-medium text-primary">#${rankValue}</span>
+                      <span class="text-muted-foreground"> (${actualValue})</span>
+                    </div>
+                  </div>
                 </div>
               `);
-          })
-          .on("mouseout", function() {
-            d3.select(`.type-path-${d.type}`)
-              .attr("stroke-width", selectedType === d.type ? 4 : 3)
-              .attr("opacity", selectedType === d.type ? 1 : 0.7);
             
-            d3.select(tooltipRef.current)
-              .style("opacity", 0);
+            positionTooltip(event);
           })
-          .on("click", function() {
-            setSelectedType(selectedType === d.type ? null : d.type);
+          .on("mousemove", function(event: MouseEvent) {
+            positionTooltip(event);
           });
+
+
+
       });
     });
 
@@ -303,16 +351,16 @@ export const StatsComparisonChart = ({
         <CardTitle>Stats Ranking by Type</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="relative">
+        <div ref={containerRef} className="relative w-full">
           <svg ref={svgRef} className="w-full" />
           <div 
             ref={tooltipRef}
-            className="absolute pointer-events-none opacity-0 transition-opacity"
-            style={{
-              zIndex: 10,
-              backgroundColor: 'white',
-              borderRadius: '4px'
-            }}
+            className={cn(
+              "absolute pointer-events-none opacity-0 transition-opacity",
+              "bg-card text-card-foreground",
+              "rounded-lg border shadow-lg p-3",
+              "z-50"
+            )}
           />
         </div>
       </CardContent>

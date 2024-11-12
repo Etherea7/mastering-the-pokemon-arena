@@ -122,50 +122,58 @@ function formatPokemonNameForApi(name: string): string {
 }
 
 export async function GET(
-  request: Request,
-  { params }: { params: { name: string } }
-) {
-  try {
-    const pokemonName = params.name
-    if (!pokemonName) {
-      return NextResponse.json(
-        { error: 'Pokemon name is required' },
-        { status: 400 }
-      )
-    }
-
-    const formattedName = formatPokemonNameForApi(pokemonName)
-    
-    // Try to fetch the Pokemon data with the formatted name
-    let response = await fetch(`https://pokeapi.co/api/v2/pokemon/${formattedName.toLowerCase()}`)
-    
-    // If not found, try with the base form
-    if (!response.ok) {
-      const baseName = pokemonName.split('-')[0].toLowerCase()
-      response = await fetch(`https://pokeapi.co/api/v2/pokemon/${baseName}`)
-      
-      if (!response.ok) {
-        console.warn(`Pokemon data not found for ${pokemonName} (tried: ${formattedName} and ${baseName})`)
+    request: Request,
+    { params }: { params: { name: string } }
+  ) {
+    try {
+      const pokemonName = params.name
+      if (!pokemonName) {
         return NextResponse.json(
-          { error: 'Pokemon not found' },
-          { status: 404 }
+          { error: 'Pokemon name is required' },
+          { status: 400 }
         )
       }
+  
+      const formattedName = formatPokemonNameForApi(pokemonName)
+      
+      // Try to fetch the Pokemon data with the formatted name
+      let response = await fetch(`https://pokeapi.co/api/v2/pokemon/${formattedName.toLowerCase()}`)
+      
+      // If not found, try with the base form
+      if (!response.ok) {
+        const baseName = pokemonName.split('-')[0].toLowerCase()
+        response = await fetch(`https://pokeapi.co/api/v2/pokemon/${baseName}`)
+        
+        if (!response.ok) {
+          console.warn(`Pokemon data not found for ${pokemonName} (tried: ${formattedName} and ${baseName})`)
+          return NextResponse.json(
+            { error: 'Pokemon not found' },
+            { status: 404 }
+          )
+        }
+      }
+      
+      const data = await response.json()
+      
+      return NextResponse.json({
+        name: pokemonName,
+        sprite: data.sprites.front_default || '',
+        types: data.types.map((t: any) => t.type.name),
+        stats: {
+          hp: data.stats[0].base_stat,
+          attack: data.stats[1].base_stat,
+          defense: data.stats[2].base_stat,
+          special_attack: data.stats[3].base_stat,
+          special_defense: data.stats[4].base_stat,
+          speed: data.stats[5].base_stat
+        }
+      })
+  
+    } catch (error) {
+      console.error('Error fetching Pokemon data:', error)
+      return NextResponse.json(
+        { error: 'Failed to fetch Pokemon data' },
+        { status: 500 }
+      )
     }
-    
-    const data = await response.json()
-    
-    return NextResponse.json({
-      name: pokemonName,
-      sprite: data.sprites.front_default || '',
-      types: data.types.map((t: any) => t.type.name)
-    })
-
-  } catch (error) {
-    console.error('Error fetching Pokemon sprite:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch Pokemon sprite' },
-      { status: 500 }
-    )
   }
-}

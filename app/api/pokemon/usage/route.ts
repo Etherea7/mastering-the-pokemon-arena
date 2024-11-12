@@ -58,6 +58,7 @@ export async function GET(request: Request) {
         year_month: true,
         battle_format: true,
         generation: true,
+        rating: true
       },
       orderBy: [
         { year_month: 'asc' },

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { FormatTypeChart } from "@/components/format/FormatTypeAnalysis";
+import FormatParallelAnalysis from "@/components/format/FormatParallelAnalysis";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +17,20 @@ import {
   type PokemonSpriteData,
 } from "@/types/format";
 
+
+
+interface ExtendedFormatPokemonData extends FormatPokemonData {
+  stats?: {
+    hp: number;
+    attack: number;
+    defense: number;
+    special_attack: number;
+    special_defense: number;
+    speed: number;
+  };
+}
+
+
 interface FormatControls {
     selectedFormat: BattleFormat;
     selectedGeneration: Generation;
@@ -28,16 +43,15 @@ interface FormatControls {
     selectedRating: 1500  // Default rating threshold
   };
 
-interface FormatState {
-  pokemonData: FormatPokemonData[];
-  loading: boolean;
-  error: string | null;
-  progress: {
-    current: number;
-    total: number;
-  };
-  
-}
+  interface FormatState {
+    pokemonData: ExtendedFormatPokemonData[];  // Changed from FormatPokemonData
+    loading: boolean;
+    error: string | null;
+    progress: {
+      current: number;
+      total: number;
+    };
+  }
 
 interface AggregatedUsageData {
   name: string;
@@ -203,6 +217,7 @@ export default function FormatAnalysisPage({ isVisible }: { isVisible: boolean }
       loading: true, 
       error: null,
       pokemonData: [], 
+      // Don't reset progress here, just reset when data fetching starts
       progress: { current: 0, total: 0 } 
     }));
   
@@ -210,73 +225,89 @@ export default function FormatAnalysisPage({ isVisible }: { isVisible: boolean }
         const params = new URLSearchParams({
             battle_format: controls.selectedFormat.toLowerCase(),
             generation: controls.selectedGeneration,
-            rating: controls.selectedRating?.toString() ?? '',  // Add rating parameter
-          });
+            rating: controls.selectedRating?.toString() ?? '',
+        });
   
-      const usageResponse = await fetch(`/api/pokemon/usage?${params}`);
-      if (!usageResponse.ok) {
-        throw new Error(`Usage data fetch failed: ${usageResponse.status}`);
-      }
-  
-      const usageData: FormatUsageResponse = await usageResponse.json();
-      const aggregatedData = aggregateUsageData(usageData.data);
-  
-      if (aggregatedData.length === 0) {
-        throw new Error('No Pokemon data found for these parameters');
-      }
-  
-      setState(prev => ({
-        ...prev,
-        progress: { current: 0, total: aggregatedData.length }
-      }));
-  
-      // Process all Pokemon data with controlled concurrency
-      const processedResults = await fetchConcurrent(
-        aggregatedData,
-        async (pokemon) => {
-          const spriteData = await fetchPokemonSprite(pokemon.name);
-          if (spriteData) {
-            return {
-              ...pokemon,
-              types: spriteData.types,
-              sprite: spriteData.sprite,
-            };
-          }
-          return null;
-        },
-        MAX_CONCURRENT_REQUESTS,
-        (current) => {
-            setState(prev => ({ 
-              ...prev, 
-              progress: { current, total: aggregatedData.length } 
-            }));
+        // Step 1: Fetch usage data
+        const usageResponse = await fetch(`/api/pokemon/usage?${params}`);
+        if (!usageResponse.ok) {
+            throw new Error(`Usage data fetch failed: ${usageResponse.status}`);
         }
-      );
   
-      const validResults = processedResults.filter((result): result is FormatPokemonData => result !== null);
+        const usageData: FormatUsageResponse = await usageResponse.json();
+        const aggregatedData = aggregateUsageData(usageData.data);
   
-      // Update state with all processed data
-      setState(prev => ({
-        ...prev,
-        loading: false,
-        pokemonData: validResults,
-        progress: {
-          current: validResults.length,
-          total: aggregatedData.length
+        if (aggregatedData.length === 0) {
+            throw new Error('No Pokemon data found for these parameters');
         }
-      }));
+
+        // Step 2: Set total only once
+        setState(prev => ({
+            ...prev,
+            progress: { 
+                current: 0,
+                total: aggregatedData.length 
+            }
+        }));
+  
+        // Step 3: Process Pokemon data with progress tracking
+        let completedRequests = 0;
+        const processedResults = await fetchConcurrent(
+            aggregatedData,
+            async (pokemon) => {
+                const spriteData = await fetchPokemonSprite(pokemon.name);
+                if (spriteData) {
+                    completedRequests++;
+                    // Update progress in a more stable way
+                    setState(prev => ({
+                        ...prev,
+                        progress: {
+                            ...prev.progress,
+                            current: completedRequests
+                        }
+                    }));
+                    return {
+                        ...pokemon,
+                        types: spriteData.types,
+                        sprite: spriteData.sprite,
+                        stats: spriteData.stats
+                    } as ExtendedFormatPokemonData;
+                }
+                return null;
+            },
+            MAX_CONCURRENT_REQUESTS
+            // Remove the progress callback here as we're handling it above
+        );
+  
+        const validResults = processedResults.filter((result): result is ExtendedFormatPokemonData => 
+            result !== null && result.stats !== undefined
+        );
+  
+        // Final state update
+        setState(prev => ({
+            ...prev,
+            loading: false,
+            pokemonData: validResults,
+            // Keep the final progress state
+            progress: {
+                current: completedRequests,
+                total: aggregatedData.length
+            }
+        }));
   
     } catch (error) {
-      setState(prev => ({
-        ...prev,
-        error: error instanceof Error ? error.message : 'Failed to fetch format data',
-        loading: false,
-        pokemonData: []
-      }));
+        setState(prev => ({
+            ...prev,
+            error: error instanceof Error ? error.message : 'Failed to fetch format data',
+            loading: false,
+            pokemonData: [],
+            // Reset progress on error
+            progress: { current: 0, total: 0 }
+        }));
     } finally {
-      dataFetchingRef.current = false;
+        dataFetchingRef.current = false;
     }
-  }, [controls.selectedFormat, controls.selectedGeneration,controls.selectedRating, isVisible, aggregateUsageData]);
+}, [controls.selectedFormat, controls.selectedGeneration, controls.selectedRating, isVisible, aggregateUsageData]);
   
   // Initialize cache on component mount
   useEffect(() => {
@@ -422,6 +453,11 @@ export default function FormatAnalysisPage({ isVisible }: { isVisible: boolean }
         selectedGeneration={controls.selectedGeneration}
         onFormatChange={handleFormatChange}
         onGenerationChange={handleGenerationChange}
+        loading={state.loading}
+      />
+      <FormatParallelAnalysis 
+        pokemonData={state.pokemonData}
+        selectedFormat={controls.selectedFormat}
         loading={state.loading}
       />
     </div>

@@ -22,6 +22,7 @@ import {
 import { Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
+
 interface PokemonSelectorProps {
     selectedPokemon: string[]
     onPokemonChange: (pokemon: string[]) => void
@@ -34,12 +35,21 @@ interface PokemonSelectorProps {
     rating?: number  // Added rating
   }
 
-interface PokemonData {
-    name: string
-    usedCount: number
-    spriteUrl?: string
-    types: string[]
+  interface PokemonData {
+    name: string;
+    usedCount: number;
+    types: string[];
+    spriteUrl?: string;
+    averageUsage?: number;
   }
+  
+  interface AggregatedStats {
+    totalUsage: number;
+    totalCount: number;
+    realCount: number;
+  }
+  
+
 
 // Helper function to get sprite URL from PokeAPI
 function chunkArray<T>(array: T[], size: number): T[][] {
@@ -53,9 +63,16 @@ function chunkArray<T>(array: T[], size: number): T[][] {
   // Helper function to add delay between requests
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
   // Modified getPokemonSprite function
-  async function getPokemonData(name: string, retries = 3): Promise<{ spriteUrl: string, types: string[] }> {
+  async function getPokemonData(
+    name: string, 
+    signal: AbortSignal,
+    retries = 3
+  ): Promise<{ spriteUrl: string; types: string[] }> {
     try {
-      const response = await fetch(`/api/pokeapi/sprites/${encodeURIComponent(name)}`);
+      const response = await fetch(
+        `/api/pokeapi/sprites/${encodeURIComponent(name)}`,
+        { signal }
+      );
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -66,10 +83,14 @@ function chunkArray<T>(array: T[], size: number): T[][] {
         spriteUrl: data.sprite,
         types: data.types
       };
-    } catch (error) {
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        throw error; // Re-throw abort errors
+      }
+      
       if (retries > 0) {
-        await delay(1000); // Wait 1 second before retrying
-        return getPokemonData(name, retries - 1);
+        await delay(1000);
+        return getPokemonData(name, signal, retries - 1);
       }
       console.error(`Error fetching Pokemon data for ${name}:`, error);
       return { spriteUrl: '', types: [] };
@@ -135,67 +156,89 @@ export function PokemonSelector({
     const itemsPerPage = 10
 
     useEffect(() => {
+        let isMounted = true;
+        let abortController = new AbortController();
+      
         const fetchPokemonList = async () => {
-          if (!generation || !battleFormat) return
+          if (!generation || !battleFormat) return;
           
           try {
-            setLoading(true)
+            setLoading(true);
             const params = new URLSearchParams({
               battle_format: battleFormat.toLowerCase(),
               generation: generation,
               year_month_gte: `${startYear}-${startMonth}`,
               year_month_lte: `${endYear}-${endMonth}`,
               ...(rating !== undefined && { rating: rating.toString() }),
-            })
-            const response = await fetch(`/api/pokemon/usage?${params}`)
-            const result = await response.json()
+            });
+      
+            const response = await fetch(`/api/pokemon/usage?${params}`);
+            const result = await response.json();
             
+            if (!isMounted) return;
+      
             if (result.data && Array.isArray(result.data)) {
-              // Group by Pokemon name and sum raw_counts
-              const pokemonMap = result.data.reduce((acc: Map<string, PokemonData>, item: any) => {
+              const aggregatedData = result.data.reduce((acc: Map<string, AggregatedStats>, item: any) => {
                 if (!acc.has(item.name)) {
                   acc.set(item.name, {
-                    name: item.name,
-                    usedCount: item.real_count || 0,
-                    types: []
-                  })
+                    totalUsage: item.usage_percent || 0,
+                    totalCount: 1,
+                    realCount: item.real_count || 0
+                  });
                 } else {
-                  const existing = acc.get(item.name)!
+                  const current = acc.get(item.name)!;
                   acc.set(item.name, {
-                    ...existing,
-                    usedCount: existing.usedCount + (item.real_count || 0)
-                  })
+                    totalUsage: current.totalUsage + (item.usage_percent || 0),
+                    totalCount: current.totalCount + 1,
+                    realCount: current.realCount + (item.real_count || 0)
+                  });
                 }
-                return acc
-              }, new Map())
-    
-              // Convert to array and sort by usedCount
-              const aggregatedPokemon = Array.from(pokemonMap.values())
-                .sort((a, b) => b.usedCount - a.usedCount)
-    
-                setPokemonList(aggregatedPokemon)
-
-                // Fetch sprites in batches
-                const BATCH_SIZE = 5;
-                const DELAY_BETWEEN_BATCHES = 500; // 500ms delay between batches
-                
-                const pokemonChunks = chunkArray(aggregatedPokemon, BATCH_SIZE);
-                
-                for (const chunk of pokemonChunks) {
+                return acc;
+              }, new Map<string, AggregatedStats>());
+              
+              const topPokemon: PokemonData[] = Array.from<[string, AggregatedStats]>(
+                aggregatedData.entries()
+              )
+                .map(([name, stats]) => ({
+                  name,
+                  usedCount: stats.realCount,
+                  averageUsage: stats.totalUsage / stats.totalCount,
+                  types: []
+                }))
+                .sort((a, b) => (b.averageUsage || 0) - (a.averageUsage || 0))
+                .slice(0, 200);
+      
+              if (!isMounted) return;
+              setPokemonList(topPokemon);
+      
+              const BATCH_SIZE = 20;
+              const DELAY_BETWEEN_BATCHES = 50;
+              const pokemonChunks = chunkArray(topPokemon, BATCH_SIZE);
+      
+              for (let i = 0; i < pokemonChunks.length; i++) {
+                if (!isMounted || abortController.signal.aborted) {
+                  break;
+                }
+      
+                const chunk = pokemonChunks[i];
+                try {
                   const updatedPokemonData = await Promise.all(
-                    chunk.map(async (pokemon) => {
-                      const data = await getPokemonData(pokemon.name);
+                    chunk.map(async (pokemon: PokemonData) => {
+                      // Pass the abort signal to fetch
+                      const data = await getPokemonData(pokemon.name, abortController.signal);
                       return {
                         ...pokemon,
                         spriteUrl: data.spriteUrl,
-                        types: data.types
+                        types: data.types,
                       };
                     })
                   );
+      
+                  if (!isMounted) break;
                   
-                  setPokemonList(currentList => {
+                  setPokemonList((currentList: PokemonData[]) => {
                     const newList = [...currentList];
-                    updatedPokemonData.forEach(updatedPokemon => {
+                    updatedPokemonData.forEach((updatedPokemon: PokemonData) => {
                       const index = newList.findIndex(p => p.name === updatedPokemon.name);
                       if (index !== -1) {
                         newList[index] = updatedPokemon;
@@ -203,20 +246,34 @@ export function PokemonSelector({
                     });
                     return newList;
                   });
-                  
+      
                   await delay(DELAY_BETWEEN_BATCHES);
+                } catch (error: any) {
+                  if (error.name === 'AbortError') {
+                    console.log('Fetch aborted');
+                    break;
+                  }
+                  console.error('Error processing chunk:', error);
                 }
               }
+            }
           } catch (error) {
-            console.error('Error fetching Pokemon list:', error)
-            setPokemonList([])
+            console.error('Error fetching Pokemon list:', error);
+            if (isMounted) setPokemonList([]);
           } finally {
-            setLoading(false)
+            if (isMounted) setLoading(false);
           }
-        }
-    
-        fetchPokemonList()
-      }, [generation, battleFormat, startMonth, startYear, endMonth, endYear, rating])
+        };
+      
+        fetchPokemonList();
+      
+        return () => {
+          isMounted = false;
+          abortController.abort();
+        };
+      }, [generation, battleFormat, startMonth, startYear, endMonth, endYear, rating]);
+      
+      
 
   const togglePokemon = (pokemonName: string) => {
     if (selectedPokemon.includes(pokemonName)) {

@@ -1,12 +1,8 @@
-import { Toaster } from '@/components/ui/toaster';
-import '@uploadthing/react/styles.css';
-import type { Metadata } from 'next';
-import NextTopLoader from 'nextjs-toploader';
-import { Inter } from 'next/font/google';
+// app/layout.tsx
+import { Metadata } from 'next';
+import { LayoutProvider } from '@/app/layout-provider';
 import './globals.css';
-import Sidebar from '@/components/layout/sidebar';
 
-const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: 'Mastering the Pokemon Arena',
@@ -21,18 +17,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${inter.className} overflow-hidden`} suppressHydrationWarning={true}>
-        <NextTopLoader showSpinner={false} />
-        <Toaster />
-        <div className="flex h-screen">
-          <Sidebar />
-          <main className="flex-1 overflow-y-auto">
-            {children}
-          </main>
-        </div>
-
+      <head />
+      <body>
+        <LayoutProvider>{children}</LayoutProvider>
       </body>
     </html>
   );
 }
-

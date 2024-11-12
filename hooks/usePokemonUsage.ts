@@ -85,12 +85,15 @@ export function usePokemonUsage({
             }, {} as Record<string, any>)
 
             const pokemonRankings = Object.entries(pokemonAverages)
-              .map(([name, data]) => ({
-                name,
-                averageUsage: data.totalUsage / data.months,
-                monthsPresent: data.months,
-                totalMonths: allMonths.length
-              }))
+                .map(([name, data]) => {
+                    const typedData = data as { totalUsage: number; months: number }; // Type assertion
+                    return {
+                    name,
+                    averageUsage: typedData.totalUsage / typedData.months,
+                    monthsPresent: typedData.months,
+                    totalMonths: allMonths.length
+                    }
+                })
               .filter(p => p.monthsPresent >= allMonths.length * 0.5)
               .sort((a, b) => b.averageUsage - a.averageUsage)
 

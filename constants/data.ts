@@ -2,14 +2,8 @@ import { NavItem } from '@/types';
 
 export const navItems: NavItem[] = [
   {
-    title: 'Format',
-    href: '/FormatAnalysis',
-    icon: 'dashboard',
-    label: 'Format'
-  },
-  {
-    title: 'Generation',
-    href: '/GenerationAnalysis',
+    title: 'Format/Generation',
+    href: '/GenFormat',
     icon: 'dashboard',
     label: 'Generation Analysis'
   },
@@ -26,7 +20,7 @@ export const navItems: NavItem[] = [
     label: 'PokemonTeamChooser'
   },
   {
-    title: 'Usage Dashboard',
+    title: 'Usage',
     href: '/PokemonUsageDashboard',
     icon: 'dashboard',
     label: 'PokemomUsageDashboard'
