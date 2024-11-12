@@ -23,12 +23,12 @@ export async function GET(
 
     const [base, moves, abilities, items, spreads, teammates, counters] = await Promise.all([
       prisma.pokemonBase.findFirst({ where }),
-      prisma.pokemonMoves.findMany({ where, orderBy: { usage: 'desc' }, take: 10 }),
-      prisma.pokemonAbilities.findMany({ where, orderBy: { usage: 'desc' }, take: 5 }),
-      prisma.pokemonItems.findMany({ where, orderBy: { usage: 'desc' }, take: 5 }),
-      prisma.pokemonSpreads.findMany({ where, orderBy: { usage: 'desc' }, take: 5 }),
-      prisma.pokemonTeammates.findMany({ where, orderBy: { usage: 'desc' }, take: 6 }),
-      prisma.pokemonCounters.findMany({ where, orderBy: { lose_rate_against_opp: 'desc' }, take: 10 }),
+      prisma.pokemonMoves.findMany({ where, orderBy: { Usage: 'desc' }, take: 10 }),
+      prisma.pokemonAbilities.findMany({ where, orderBy: { Usage: 'desc' }, take: 5 }),
+      prisma.pokemonItems.findMany({ where, orderBy: { Usage: 'desc' }, take: 5 }),
+      prisma.pokemonSpreads.findMany({ where, orderBy: { Usage: 'desc' }, take: 5 }),
+      prisma.pokemonTeammates.findMany({ where, orderBy: { Usage: 'desc' }, take: 6 }),
+      prisma.pokemonCounters.findMany({ where, orderBy: { Lose_Rate_Against_Opp: 'desc' }, take: 10 }),
     ]);
 
     return successResponse({

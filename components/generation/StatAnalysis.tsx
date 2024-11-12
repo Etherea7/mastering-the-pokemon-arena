@@ -339,7 +339,7 @@ export const StatsComparisonChart = ({
       });
     });
 
-  }, [loading, pokemonData, selectedGen,calculateTypeStats, selectedType]);
+  }, [loading, pokemonData, selectedGen,calculateTypeStats, selectedType,positionTooltip]);
 
   if (loading) {
     return <LoadingSkeleton />;

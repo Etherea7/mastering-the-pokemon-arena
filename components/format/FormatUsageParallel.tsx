@@ -318,7 +318,7 @@ export default function FormatUsageChart({
 
   });
 
-  }, [loading, pokemonData, selectedFormat, calculateTypeStats, selectedType]);
+  }, [loading, pokemonData, selectedFormat, calculateTypeStats, selectedType, positionTooltip]);
 
 
 
