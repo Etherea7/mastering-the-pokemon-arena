@@ -16,7 +16,7 @@ import {
   type FormatUsageResponse,
   type PokemonSpriteData,
 } from "@/types/format";
-
+import FormatStatsTables from "@/components/format/FormToggle";
 
 
 interface ExtendedFormatPokemonData extends FormatPokemonData {
@@ -71,7 +71,7 @@ const INITIAL_STATE: FormatState = {
 };
 
 const CACHE_KEY = 'pokemon-sprite-cache';
-const MAX_CONCURRENT_REQUESTS = 20; // Increased from 10
+const MAX_CONCURRENT_REQUESTS = 50; // Increased from 10
 
 
 
@@ -458,6 +458,10 @@ export default function FormatAnalysisPage({ isVisible }: { isVisible: boolean }
       <FormatParallelAnalysis 
         pokemonData={state.pokemonData}
         selectedFormat={controls.selectedFormat}
+        loading={state.loading}
+      />
+      <FormatStatsTables 
+        pokemonData={state.pokemonData}
         loading={state.loading}
       />
     </div>
