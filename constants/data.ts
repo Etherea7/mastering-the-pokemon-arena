@@ -19,12 +19,12 @@ export const navItems: NavItem[] = [
     icon: 'dashboard',
     label: 'Types'
   },
-  {
-    title: 'ScatterPlot',
-    href: '/ParameterScatterplot',
-    icon: 'dashboard',
-    label: 'PokemonScatterPlot'
-  },
+  // {
+  //   title: 'ScatterPlot',
+  //   href: '/ParameterScatterplot',
+  //   icon: 'dashboard',
+  //   label: 'PokemonScatterPlot'
+  // },
   {
     title: 'TeamChooser',
     href: '/PokemonTeamChooser',
