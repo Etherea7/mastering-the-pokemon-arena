@@ -59,8 +59,6 @@ const specialCases: { [key: string]: string } = {
   'Morpeko': 'morpeko-full-belly',
   'Dudunsparce': 'dudunsparce-two-segment',
   'Palafin': 'palafin-zero',
-  'Maushold': 'maushold-family4',
-  'Squawkabilly': 'squawkabilly-green',
   'Tatsugiri': 'tatsugiri-curly',
   'Thundurus': 'thundurus-incarnate',
   'Tornadus': 'tornadus-incarnate',
@@ -68,6 +66,14 @@ const specialCases: { [key: string]: string } = {
   'Keldeo': 'keldeo-ordinary',
   'Shaymin': 'shaymin-land',
   'Meloetta': 'meloetta-aria',
+  'Maushold': 'maushold-family-of-four', // This is the correct API name
+  'Maushold-Four': 'maushold-family-of-four',
+  'Maushold-Three': 'maushold-family-of-three',
+  'Squawkabilly': 'squawkabilly-green-plumage',  // Green is the default form
+  'Squawkabilly-Green': 'squawkabilly-green-plumage',
+  'Squawkabilly-Blue': 'squawkabilly-blue-plumage',
+  'Squawkabilly-Yellow': 'squawkabilly-yellow-plumage',
+  'Squawkabilly-White': 'squawkabilly-white-plumage',
 }
 
 // Forms that should be stripped to base form

@@ -9,7 +9,8 @@ export async function GET(request: Request) {
     const generation = searchParams.get('generation')
     const year_month_gte = searchParams.get('year_month_gte')
     const year_month_lte = searchParams.get('year_month_lte')
-
+    const rating = searchParams.get('rating');
+    
     console.log('Querying with params:', { 
       battle_format, 
       generation,
@@ -28,7 +29,9 @@ export async function GET(request: Request) {
     if (generation) {
       where.generation = generation
     }
-
+    if (rating) {
+      where.rating = parseInt(rating);
+    }
     // Add date range filter if provided
     if (year_month_gte || year_month_lte) {
       where.year_month = {}
@@ -49,10 +52,12 @@ export async function GET(request: Request) {
       select: {
         name: true,
         usage_percent: true,
+        raw_count: true,
+        real_count: true,
+        rank: true,
         year_month: true,
         battle_format: true,
         generation: true,
-        real_count: true,
       },
       orderBy: [
         { year_month: 'asc' },
@@ -60,8 +65,6 @@ export async function GET(request: Request) {
       ]
     })
 
-    console.log(`Found ${data.length} records`)
-    console.log('Unique months:', [...new Set(data.map(item => item.year_month))].sort())
     
     return NextResponse.json({ data })
 

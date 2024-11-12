@@ -2,16 +2,16 @@ import { NavItem } from '@/types';
 
 export const navItems: NavItem[] = [
   {
-    title: 'Dashboard',
-    href: '/dashboard',
+    title: 'Format',
+    href: '/FormatAnalysis',
     icon: 'dashboard',
-    label: 'Dashboard'
+    label: 'Format'
   },
   {
-    title: 'Team Analyser',
-    href: '/PokemonTeamAnalyser',
+    title: 'Generation',
+    href: '/GenerationAnalysis',
     icon: 'dashboard',
-    label: 'Team Analyser'
+    label: 'Generation Analysis'
   },
   {
     title: 'Types',
@@ -19,12 +19,6 @@ export const navItems: NavItem[] = [
     icon: 'dashboard',
     label: 'Types'
   },
-  // {
-  //   title: 'ScatterPlot',
-  //   href: '/ParameterScatterplot',
-  //   icon: 'dashboard',
-  //   label: 'PokemonScatterPlot'
-  // },
   {
     title: 'TeamChooser',
     href: '/PokemonTeamChooser',
