@@ -1,10 +1,7 @@
 import { prisma } from '@/lib/prisma'
-import { z } from 'zod'
-import { commonQuerySchema, errorResponse, successResponse } from '@/lib/api'
+import {  errorResponse, successResponse } from '@/lib/api'
 
-const pokemonFormatsSchema = commonQuerySchema.extend({
-  name: z.string(),
-});
+// 
 
 // Route: /api/pokemon/formats/[name]/route.ts
 export async function GET(

@@ -110,7 +110,6 @@ export const StatsComparisonChart = ({
     const stats = ['attack', 'defense', 'hp', 'specialAttack', 'specialDefense', 'speed'];
     const rankings = Object.entries(typeStats).map(([type, data]) => {
       const typeData: any = { type };
-      const statsKeys = ['hp', 'attack', 'defense', 'special_attack', 'special_defense', 'speed'] as const;
       stats.forEach(stat => {
         const statKey = stat === 'hp' ? 'hp' : 
                        stat === 'specialAttack' ? 'special_attack' :
@@ -292,7 +291,7 @@ export const StatsComparisonChart = ({
       });
     });
 
-  }, [loading, pokemonData, selectedGen, selectedType]);
+  }, [loading, pokemonData, selectedGen,calculateTypeStats, selectedType]);
 
   if (loading) {
     return <LoadingSkeleton />;

@@ -22,7 +22,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   Cell,
-  Legend
+
 } from 'recharts';
 
 interface TypeData {

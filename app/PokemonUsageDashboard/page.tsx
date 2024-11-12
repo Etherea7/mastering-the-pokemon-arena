@@ -30,10 +30,6 @@ export default function PokemonUsagePage() {
     setSelectionMode('preset')
   }
 
-  const handleCustomPokemonChange = (pokemon: string[]) => {
-    setCustomSelectedPokemon(pokemon)
-    setSelectionMode('custom')
-  }
 
   const { selectedPokemon, chartData, loading: usageLoading } = usePokemonUsage({
     selectedTier,

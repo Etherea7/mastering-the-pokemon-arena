@@ -58,7 +58,7 @@ const INITIAL_STATE: FormatState = {
 
 const CACHE_KEY = 'pokemon-sprite-cache';
 const MAX_CONCURRENT_REQUESTS = 20; // Increased from 10
-const BATCH_DELAY = 50;
+
 
 
 const initializeCache = () => {
@@ -276,7 +276,7 @@ export default function FormatAnalysisPage({ isVisible }: { isVisible: boolean }
     } finally {
       dataFetchingRef.current = false;
     }
-  }, [controls.selectedFormat, controls.selectedGeneration, isVisible, aggregateUsageData]);
+  }, [controls.selectedFormat, controls.selectedGeneration,controls.selectedRating, isVisible, aggregateUsageData]);
   
   // Initialize cache on component mount
   useEffect(() => {

@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   Table,
   TableBody,

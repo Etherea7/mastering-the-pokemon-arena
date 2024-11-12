@@ -7,6 +7,12 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer } from 'recharts'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import Image from 'next/image'
+
+interface RadarDataPoint {
+  stat: string;
+  [key: string]: string | number; // Allow both string and number values
+}
 
 interface PokemonStats {
   hp: number;
@@ -116,7 +122,7 @@ export default function PokemonTeamAnalyser() {
   const radarData = [
     ...getRadarData(selectedPokemon1),
     ...getRadarData(selectedPokemon2),
-  ].reduce((acc, curr) => {
+  ].reduce<RadarDataPoint[]>((acc, curr) => {
     const existingItem = acc.find(item => item.stat === curr.stat);
     if (existingItem) {
       return acc.map(item => 
@@ -153,13 +159,15 @@ export default function PokemonTeamAnalyser() {
                   <div key={pokemon.id} className="flex items-center space-x-2 mb-2">
                     <RadioGroupItem value={pokemon.id.toString()} id={`team1-${pokemon.id}`} />
                     <Label htmlFor={`team1-${pokemon.id}`} className="capitalize flex items-center">
-                      {pokemon.sprite && (
-                        <img 
-                          src={pokemon.sprite} 
-                          alt={pokemon.name} 
-                          className="w-8 h-8 mr-2"
-                        />
-                      )}
+                    {pokemon.sprite && (
+                          <Image 
+                            src={pokemon.sprite} 
+                            alt={pokemon.name} 
+                            width={32}
+                            height={32}
+                            className="mr-2"
+                          />
+                        )}
                       {pokemon.name}
                     </Label>
                   </div>
@@ -174,14 +182,14 @@ export default function PokemonTeamAnalyser() {
             </CardHeader>
             <CardContent className="h-[250px]">
               <ResponsiveContainer width="100%" height="100%">
-                <RadarChart data={radarData}>
+                <RadarChart data={radarData} >
                   <PolarGrid />
                   <PolarAngleAxis dataKey="stat" />
                   <PolarRadiusAxis />
                   {selectedPokemon1 && (
                     <Radar
                       name={pokemonData.find(p => p.id === selectedPokemon1)?.name}
-                      dataKey={pokemonData.find(p => p.id === selectedPokemon1)?.name}
+                      dataKey={pokemonData.find(p => p.id === selectedPokemon1)?.name || ''}
                       stroke="#8884d8"
                       fill="#8884d8"
                       fillOpacity={0.6}
@@ -190,7 +198,7 @@ export default function PokemonTeamAnalyser() {
                   {selectedPokemon2 && (
                     <Radar
                       name={pokemonData.find(p => p.id === selectedPokemon2)?.name}
-                      dataKey={pokemonData.find(p => p.id === selectedPokemon2)?.name}
+                      dataKey={pokemonData.find(p => p.id === selectedPokemon2)?.name || ''}
                       stroke="#82ca9d"
                       fill="#82ca9d"
                       fillOpacity={0.6}
@@ -211,13 +219,15 @@ export default function PokemonTeamAnalyser() {
                   <div key={pokemon.id} className="flex items-center space-x-2 mb-2">
                     <RadioGroupItem value={pokemon.id.toString()} id={`team2-${pokemon.id}`} />
                     <Label htmlFor={`team2-${pokemon.id}`} className="capitalize flex items-center">
-                      {pokemon.sprite && (
-                        <img 
-                          src={pokemon.sprite} 
-                          alt={pokemon.name} 
-                          className="w-8 h-8 mr-2"
-                        />
-                      )}
+                    {pokemon.sprite && (
+                          <Image 
+                            src={pokemon.sprite} 
+                            alt={pokemon.name} 
+                            width={24}
+                            height={24}
+                            className="mx-auto mb-1"
+                          />
+                        )}
                       {pokemon.name}
                     </Label>
                   </div>
@@ -241,12 +251,14 @@ export default function PokemonTeamAnalyser() {
                       {[...team1, ...team2].map(pokemon => (
                         <TableHead key={pokemon.id} className="px-2 py-1 text-xs capitalize">
                           {pokemon.sprite && (
-                            <img 
-                              src={pokemon.sprite} 
-                              alt={pokemon.name} 
-                              className="w-6 h-6 mx-auto mb-1"
-                            />
-                          )}
+                              <Image 
+                                src={pokemon.sprite} 
+                                alt={pokemon.name} 
+                                width={24}
+                                height={24}
+                                className="mx-auto mb-1"
+                              />
+                            )}
                           {pokemon.name}
                         </TableHead>
                       ))}

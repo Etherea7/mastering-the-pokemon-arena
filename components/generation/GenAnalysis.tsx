@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from 'react';
 import { TypeDistributionChart } from "@/components/generation/TypeAnalysis";
 import { StatsComparisonChart } from "@/components/generation/StatAnalysis";
 import { TypeStatsTable } from "@/components/generation/StatsTable";
@@ -58,7 +58,7 @@ export default function GenAnalysis() {
     }
   };
 
-  const fetchGenerationData = async (generation: string) => {
+  const fetchGenerationData = useCallback(async (generation: string) => {
     setLoading(true);
     setError(null);
     const genRange = GENERATION_RANGES[generation as keyof typeof GENERATION_RANGES];
@@ -90,11 +90,11 @@ export default function GenAnalysis() {
     } finally {
       setLoading(false);
     }
-  };
+  },[]);
 
   useEffect(() => {
     fetchGenerationData(selectedGen);
-  }, [selectedGen]);
+  }, [selectedGen, fetchGenerationData]);
 
   const handleGenerationChange = (generation: string) => {
     setSelectedGen(generation);

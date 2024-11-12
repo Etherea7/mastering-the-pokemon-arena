@@ -8,7 +8,7 @@ import FormatAnalysisPage  from "@/components/format/FormatPage"
 
 
 export default function AnalysisPage() {
-    const [activeTab, setActiveTab] = useState('format');
+    const [activeTab] = useState('format');
   return (
     <ScrollArea className="h-[calc(100vh-2rem)] w-full">
       <div className="container mx-auto p-4">
