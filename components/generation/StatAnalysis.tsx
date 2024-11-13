@@ -348,7 +348,7 @@ export const StatsComparisonChart = ({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Stats Ranking by Type</CardTitle>
+        <CardTitle>Avg Stats Ranking by Type</CardTitle>
       </CardHeader>
       <CardContent>
         <div ref={containerRef} className="relative w-full">

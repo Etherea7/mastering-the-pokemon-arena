@@ -248,12 +248,12 @@ export function TypeStatsTable({ pokemonData, loading }: StatsTableProps) {
                   </Button>
                 </TableHead>
                 {[
-                  { key: 'hp', label: 'HP' },
-                  { key: 'attack', label: 'Attack' },
-                  { key: 'defense', label: 'Defense' },
-                  { key: 'special_attack', label: 'Sp. Attack' },
-                  { key: 'special_defense', label: 'Sp. Defense' },
-                  { key: 'speed', label: 'Speed' }
+                  { key: 'hp', label: 'Avg HP' },
+                  { key: 'attack', label: 'Avg Attack' },
+                  { key: 'defense', label: 'Avg Defense' },
+                  { key: 'special_attack', label: 'Avg Sp. Attack' },
+                  { key: 'special_defense', label: 'Avg Sp. Defense' },
+                  { key: 'speed', label: 'Avg Speed' }
                 ].map(({ key, label }) => (
                   <TableHead key={key}>
                     <Button 
