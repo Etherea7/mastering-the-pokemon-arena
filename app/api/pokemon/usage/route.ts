@@ -24,7 +24,6 @@ export async function GET(request: Request) {
     if (battle_format) {
       where.battle_format = battle_format
     }
-
     // Add generation filter if provided
     if (generation) {
       where.generation = generation

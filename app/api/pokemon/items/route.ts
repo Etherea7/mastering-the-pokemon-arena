@@ -1,31 +1,29 @@
-import { prisma } from '@/lib/prisma'
-import { commonQuerySchema, errorResponse, successResponse, getPaginationParams, buildWhereClause } from '@/lib/api'
+import { prisma } from '@/lib/prisma';
+import { pokemonSpecificSchema, errorResponse, successResponse, buildWhereClause } from '@/lib/api';
 
 export async function GET(request: Request) {
-    try {
-      const { searchParams } = new URL(request.url);
-      const params = commonQuerySchema.parse(Object.fromEntries(searchParams));
-      const { pagination, filters } = getPaginationParams(params);
-  
-      const [data, total] = await Promise.all([
-        prisma.pokemonItems.findMany({
-          where: buildWhereClause(filters),
-          orderBy: { usage: 'desc' },
-          ...pagination,
-        }),
-        prisma.pokemonItems.count({
-          where: buildWhereClause(filters),
-        }),
-      ]);
-  
-      return successResponse({
-        data,
-        pagination: {
-          total,
-          ...pagination,
-        },
-      });
-    } catch (error) {
-      return errorResponse('Failed to fetch Pokemon items data');
-    }
+  try {
+    const { searchParams } = new URL(request.url);
+    const validatedParams = pokemonSpecificSchema.parse(Object.fromEntries(searchParams));
+    const { name, ...filters } = validatedParams;
+
+    const where = buildWhereClause(filters);
+    if (name) where.name = name;
+
+    const data = await prisma.pokemonItems.findMany({
+      where,
+      select: {
+        name: true,
+        Item: true,
+        Usage: true,
+      },
+      orderBy: {
+        Usage: 'desc',
+      },
+    });
+
+    return successResponse({ data });
+  } catch (error) {
+    return errorResponse('Failed to fetch Pokemon items data');
   }
+}

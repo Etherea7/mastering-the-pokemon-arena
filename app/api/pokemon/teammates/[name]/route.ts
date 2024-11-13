@@ -1,15 +1,11 @@
-import { prisma } from '@/lib/prisma'
-import { z } from 'zod'
-import { NextResponse } from 'next/server'
-
-const successResponse = (data: any) => NextResponse.json(data);
-const errorResponse = (message: string, status = 400) => 
-  NextResponse.json({ error: message }, { status });
-
-const querySchema = z.object({
-  generation: z.string(),
-  battle_format: z.string(),
-});
+// app/api/pokemon/teammates/[name]/route.ts
+import { prisma } from '@/lib/prisma';
+import { 
+  pokemonSpecificSchema, 
+  errorResponse, 
+  successResponse, 
+  buildWhereClause
+} from '@/lib/api';
 
 export async function GET(
   request: Request,
@@ -17,53 +13,41 @@ export async function GET(
 ) {
   try {
     const { searchParams } = new URL(request.url);
-    const query = querySchema.parse({
-      generation: searchParams.get('generation'),
-      battle_format: searchParams.get('battle_format'),
+    const validatedParams = pokemonSpecificSchema.parse({
+      ...Object.fromEntries(searchParams),
+      name: params.name,
     });
+    const { name, ...filters } = validatedParams;
 
-    // Get teammates with averaged usage rates
-    const teammates = await prisma.pokemonTeammates.groupBy({
-      by: ['teammate'],
-      where: {
-        name: params.name,
-        generation: query.generation,
-        battle_format: query.battle_format,
-      },
-      _avg: {
-        usage: true,
+    // Build the base where clause
+    const where = buildWhereClause(filters);
+    where.name = name;
+
+    // Get all teammates data
+    const teammates = await prisma.pokemonTeammates.findMany({
+      where,
+      select: {
+        Teammate: true,
+        Usage: true,
+        year_month: true,
+        rating: true,
       },
       orderBy: {
-        _avg: {
-          usage: 'desc'
-        }
-      },
-      having: {
-        usage: {
-          _avg: {
-            gt: 0  // Filter out zero usage
-          }
-        }
+        Usage: 'desc'
       }
     });
 
-    // Transform the data to match expected format
-    const formattedTeammates = teammates.map(t => ({
-      name: t.teammate,
-      usage: Number((t._avg.usage || 0).toFixed(2))
-    }));
-
     return successResponse({
-      pokemon: params.name,
-      generation: query.generation,
-      battle_format: query.battle_format,
-      teammates: formattedTeammates
+      pokemon: name,
+      teammates: teammates.map(t => ({
+        teammate: t.Teammate,
+        usage: t.Usage,
+        year_month: t.year_month
+      })) // Return raw data for frontend processing
     });
 
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return errorResponse('Invalid parameters provided', 400);
-    }
-    return errorResponse('Failed to fetch teammate data: ' + (error as Error).message, 500);
+  } catch (error: any) {
+    console.error('Error in teammates route:', error);
+    return errorResponse(`Failed to fetch teammates for Pokemon: ${params.name}`);
   }
 }

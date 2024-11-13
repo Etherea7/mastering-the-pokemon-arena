@@ -1,30 +1,28 @@
-import { prisma } from '@/lib/prisma'
-import { commonQuerySchema, errorResponse, successResponse, getPaginationParams, buildWhereClause } from '@/lib/api'
+import { prisma } from '@/lib/prisma';
+import { pokemonSpecificSchema, errorResponse, successResponse, buildWhereClause } from '@/lib/api';
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const params = commonQuerySchema.parse(Object.fromEntries(searchParams));
-    const { pagination, filters } = getPaginationParams(params);
+    const validatedParams = pokemonSpecificSchema.parse(Object.fromEntries(searchParams));
+    const { name, ...filters } = validatedParams;
 
-    const [data, total] = await Promise.all([
-      prisma.pokemonAbilities.findMany({
-        where: buildWhereClause(filters),
-        orderBy: { usage: 'desc' },
-        ...pagination,
-      }),
-      prisma.pokemonAbilities.count({
-        where: buildWhereClause(filters),
-      }),
-    ]);
+    const where = buildWhereClause(filters);
+    if (name) where.name = name;
 
-    return successResponse({
-      data,
-      pagination: {
-        total,
-        ...pagination,
+    const data = await prisma.pokemonAbilities.findMany({
+      where,
+      select: {
+        name: true,
+        Ability: true,
+        Usage: true,
+      },
+      orderBy: {
+        Usage: 'desc',
       },
     });
+
+    return successResponse({ data });
   } catch (error) {
     return errorResponse('Failed to fetch Pokemon abilities data');
   }

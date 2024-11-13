@@ -10,7 +10,7 @@ export interface FormatUsageResponse {
 }
 
 export const BATTLE_FORMATS = {
-SMOGON: ['OU', 'UU', 'RU', 'NU', 'PU'] as const,
+SMOGON: ['ou', 'uu', 'ru', 'nu', 'pu'] as const,
 VGC: ['vgc2024reggbo3', 'vgc2024regf', 'vgc2024regg', 'vgc2024regfbo3'] as const
 } as const;
 

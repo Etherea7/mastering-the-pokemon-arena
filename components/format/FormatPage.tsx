@@ -38,7 +38,7 @@ interface FormatControls {
   }
   
   const DEFAULT_CONTROLS: FormatControls = {
-    selectedFormat: 'OU',
+    selectedFormat: 'ou',
     selectedGeneration: 'gen9',
     selectedRating: 1500  // Default rating threshold
   };
@@ -104,32 +104,36 @@ const initializeCache = () => {
     items: T[],
     fn: (item: T) => Promise<any>,
     maxConcurrent: number,
-    onProgress?: (current: number) => void  // Add progress callback
+    onProgress?: (current: number) => void
   ): Promise<any[]> {
     const results: any[] = [];
-    const inProgress = new Set();
+    const inProgress = new Set<Promise<void>>();
     const queue = [...items];
     let completed = 0;
   
     async function processItem(item: T) {
-      inProgress.add(item);
       try {
         const result = await fn(item);
         results.push(result);
         completed++;
-        onProgress?.(completed); // Call progress callback
+        onProgress?.(completed);
       } catch (error) {
         console.error('Error processing item:', error);
       }
-      inProgress.delete(item);
     }
   
     while (queue.length > 0 || inProgress.size > 0) {
       while (inProgress.size < maxConcurrent && queue.length > 0) {
         const item = queue.shift()!;
-        processItem(item);
+        const promise = processItem(item);
+        inProgress.add(promise);
+        // Remove promise from inProgress when done
+        promise.finally(() => inProgress.delete(promise));
       }
-      await new Promise(resolve => setTimeout(resolve, 10));
+      // Wait for at least one promise to complete
+      if (inProgress.size > 0) {
+        await Promise.race(inProgress);
+      }
     }
   
     return results;
@@ -146,22 +150,33 @@ export default function FormatAnalysisPage({ isVisible }: { isVisible: boolean }
     try {
       // Check memory cache first
       if (spriteCache.has(name)) {
+        console.log(`Cache hit for ${name}`);
         return spriteCache.get(name)!;
       }
   
+      console.log(`Fetching sprite data for ${name}...`);
       const response = await fetch(`/api/pokeapi/sprites/${encodeURIComponent(name)}`);
-      if (!response.ok) return null;
+      
+      if (!response.ok) {
+        console.error(`Sprite fetch failed for ${name}:`, response.status);
+        return null;
+      }
       
       const data = await response.json();
-      spriteCache.set(name, data);
+      console.log(`Received sprite data for ${name}:`, data);
       
-      // Save to localStorage periodically
-      // Using debounce would be better in production
+      // Validate the data structure
+      if (!data.sprite || !Array.isArray(data.types)) {
+        console.error(`Invalid sprite data for ${name}:`, data);
+        return null;
+      }
+  
+      spriteCache.set(name, data);
       setTimeout(saveCache, 1000);
       
       return data;
     } catch (error) {
-      console.error(`Failed to fetch sprite for ${name}`);
+      console.error(`Failed to fetch sprite for ${name}:`, error);
       return null;
     }
   };
@@ -209,120 +224,153 @@ export default function FormatAnalysisPage({ isVisible }: { isVisible: boolean }
   }, []);
 
   const fetchFormatData = useCallback(async () => {
-    if (!isVisible || dataFetchingRef.current) return;
+    if (dataFetchingRef.current) return;
     
-    dataFetchingRef.current = true;
-    setState(prev => ({ 
-      ...prev, 
-      loading: true, 
-      error: null,
-      pokemonData: [], 
-      // Don't reset progress here, just reset when data fetching starts
-      progress: { current: 0, total: 0 } 
-    }));
-  
     try {
-        const params = new URLSearchParams({
-            battle_format: controls.selectedFormat.toLowerCase(),
-            generation: controls.selectedGeneration,
-            rating: controls.selectedRating?.toString() ?? '',
-        });
+      dataFetchingRef.current = true;
+      
+      setState(prev => ({ 
+        ...prev, 
+        loading: true, 
+        error: null,
+        progress: { current: 0, total: 0 } 
+      }));
   
-        // Step 1: Fetch usage data
-        const usageResponse = await fetch(`/api/pokemon/usage?${params}`);
-        if (!usageResponse.ok) {
-            throw new Error(`Usage data fetch failed: ${usageResponse.status}`);
+      const params = new URLSearchParams({
+        battle_format: controls.selectedFormat.toLowerCase(),
+        generation: controls.selectedGeneration,
+        ...(controls.selectedRating && { rating: controls.selectedRating.toString() })
+      });
+  
+      console.log('Fetching data with params:', Object.fromEntries(params));
+  
+      const usageResponse = await fetch(`/api/pokemon/usage?${params}`);
+      
+      if (!usageResponse.ok) {
+        console.error('Usage response not OK:', await usageResponse.text());
+        throw new Error(`Usage data fetch failed: ${usageResponse.status}`);
+      }
+  
+      const usageData: FormatUsageResponse = await usageResponse.json();
+      console.log('Received usage data:', usageData);
+  
+      if (!usageData.data || !Array.isArray(usageData.data)) {
+        console.error('Invalid usage data format:', usageData);
+        throw new Error('Invalid usage data format received');
+      }
+  
+      const aggregatedData = aggregateUsageData(usageData.data);
+      console.log('Aggregated data:', aggregatedData);
+  
+      if (aggregatedData.length === 0) {
+        throw new Error('No Pokemon data found for these parameters');
+      }
+  
+      setState(prev => ({
+        ...prev,
+        progress: { 
+          current: 0,
+          total: aggregatedData.length 
         }
+      }));
   
-        const usageData: FormatUsageResponse = await usageResponse.json();
-        const aggregatedData = aggregateUsageData(usageData.data);
+      let completedRequests = 0;
+      const processedResults = await fetchConcurrent(
+        aggregatedData,
+        async (pokemon) => {
+          try {
+            console.log(`Processing ${pokemon.name}...`);
+            const spriteData = await fetchPokemonSprite(pokemon.name);
+            
+            if (!spriteData) {
+              console.warn(`No sprite data returned for ${pokemon.name}`);
+              return null;
+            }
   
-        if (aggregatedData.length === 0) {
-            throw new Error('No Pokemon data found for these parameters');
+            completedRequests++;
+            setState(prev => ({
+              ...prev,
+              progress: {
+                ...prev.progress,
+                current: completedRequests
+              }
+            }));
+  
+            const result = {
+              ...pokemon,
+              types: spriteData.types,
+              sprite: spriteData.sprite,
+              stats: spriteData.stats
+            } as ExtendedFormatPokemonData;
+  
+            console.log(`Successfully processed ${pokemon.name}:`, result);
+            return result;
+  
+          } catch (error) {
+            console.error(`Error processing pokemon ${pokemon.name}:`, error);
+            return null;
+          }
+        },
+        MAX_CONCURRENT_REQUESTS
+      );
+  
+      const validResults = processedResults.filter((result): result is ExtendedFormatPokemonData => {
+        const isValid = result !== null && result.stats !== undefined;
+        if (!isValid) {
+          console.warn('Invalid result:', result);
         }
-
-        // Step 2: Set total only once
-        setState(prev => ({
-            ...prev,
-            progress: { 
-                current: 0,
-                total: aggregatedData.length 
-            }
-        }));
+        return isValid;
+      });
   
-        // Step 3: Process Pokemon data with progress tracking
-        let completedRequests = 0;
-        const processedResults = await fetchConcurrent(
-            aggregatedData,
-            async (pokemon) => {
-                const spriteData = await fetchPokemonSprite(pokemon.name);
-                if (spriteData) {
-                    completedRequests++;
-                    // Update progress in a more stable way
-                    setState(prev => ({
-                        ...prev,
-                        progress: {
-                            ...prev.progress,
-                            current: completedRequests
-                        }
-                    }));
-                    return {
-                        ...pokemon,
-                        types: spriteData.types,
-                        sprite: spriteData.sprite,
-                        stats: spriteData.stats
-                    } as ExtendedFormatPokemonData;
-                }
-                return null;
-            },
-            MAX_CONCURRENT_REQUESTS
-            // Remove the progress callback here as we're handling it above
-        );
+      console.log(`Processed ${validResults.length} valid results out of ${aggregatedData.length} total`);
   
-        const validResults = processedResults.filter((result): result is ExtendedFormatPokemonData => 
-            result !== null && result.stats !== undefined
-        );
+      if (validResults.length === 0) {
+        throw new Error('Failed to process any Pokemon data');
+      }
   
-        // Final state update
-        setState(prev => ({
-            ...prev,
-            loading: false,
-            pokemonData: validResults,
-            // Keep the final progress state
-            progress: {
-                current: completedRequests,
-                total: aggregatedData.length
-            }
-        }));
+      setState(prev => ({
+        ...prev,
+        loading: false,
+        pokemonData: validResults,
+        error: null,
+        progress: {
+          current: validResults.length,
+          total: aggregatedData.length
+        }
+      }));
   
     } catch (error) {
-        setState(prev => ({
-            ...prev,
-            error: error instanceof Error ? error.message : 'Failed to fetch format data',
-            loading: false,
-            pokemonData: [],
-            // Reset progress on error
-            progress: { current: 0, total: 0 }
-        }));
+      console.error('Error in fetchFormatData:', error);
+      setState(prev => ({
+        ...prev,
+        error: error instanceof Error ? error.message : 'Failed to fetch format data',
+        loading: false,
+        pokemonData: [],
+        progress: { current: 0, total: 0 }
+      }));
     } finally {
-        dataFetchingRef.current = false;
+      dataFetchingRef.current = false;
     }
-}, [controls.selectedFormat, controls.selectedGeneration, controls.selectedRating, isVisible, aggregateUsageData]);
+  }, [controls.selectedFormat, controls.selectedGeneration, controls.selectedRating, aggregateUsageData]);
   
-  // Initialize cache on component mount
+  // Update the useEffect to handle initial fetch
   useEffect(() => {
-    initializeCache();
-  }, []);
-
-  useEffect(() => {
-    if (isVisible) {
+    // Only fetch if component is visible and we have valid controls
+    if (isVisible && controls.selectedFormat && controls.selectedGeneration) {
+      console.log('Initiating data fetch...');
       fetchFormatData();
     }
     
     return () => {
       dataFetchingRef.current = false;
     };
-  }, [fetchFormatData, isVisible]);
+  }, [fetchFormatData, isVisible, controls.selectedFormat, controls.selectedGeneration]);
+  
+  // Initialize cache on component mount
+  useEffect(() => {
+    initializeCache();
+  }, []);
+
 
   const handleFormatChange = useCallback((format: string) => {
     if ([...BATTLE_FORMATS.SMOGON, ...BATTLE_FORMATS.VGC].includes(format as BattleFormat)) {

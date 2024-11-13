@@ -26,7 +26,7 @@ export async function GET(request: Request) {
     const [data, total] = await Promise.all([
       prisma.pokemonMoves.findMany({
         where,
-        orderBy: { usage: 'desc' },
+        orderBy: { Usage: 'desc' },
         take,
         skip: params.name ? 0 : pagination.skip, // Skip pagination if querying specific Pokemon
       }),

@@ -1,31 +1,35 @@
-import { prisma } from '@/lib/prisma'
-import { commonQuerySchema, errorResponse, successResponse, getPaginationParams, buildWhereClause } from '@/lib/api'
+import { prisma } from '@/lib/prisma';
+import { errorResponse, successResponse, buildSpreadWhereClause, pokemonSpreadSpecificSchema } from '@/lib/api';
 
 export async function GET(request: Request) {
-    try {
-      const { searchParams } = new URL(request.url);
-      const params = commonQuerySchema.parse(Object.fromEntries(searchParams));
-      const { pagination, filters } = getPaginationParams(params);
-  
-      const [data, total] = await Promise.all([
-        prisma.pokemonSpreads.findMany({
-          where: buildWhereClause(filters),
-          orderBy: { usage: 'desc' },
-          ...pagination,
-        }),
-        prisma.pokemonSpreads.count({
-          where: buildWhereClause(filters),
-        }),
-      ]);
-  
-      return successResponse({
-        data,
-        pagination: {
-          total,
-          ...pagination,
-        },
-      });
-    } catch (error) {
-      return errorResponse('Failed to fetch Pokemon spreads data');
-    }
+  try {
+    const { searchParams } = new URL(request.url);
+    const validatedParams = pokemonSpreadSpecificSchema.parse(Object.fromEntries(searchParams));
+    const { name, ...filters } = validatedParams;
+
+    const where = buildSpreadWhereClause(filters);
+    if (name) where.name = name;
+
+    const data = await prisma.pokemonSpreads.findMany({
+      where,
+      select: {
+        name: true,
+        Nature: true,
+        hp_ev: true,
+        atk_ev: true,
+        def_ev: true,
+        spatk_ev: true,
+        spdef_ev: true,
+        spd_ev: true,
+        Usage: true,
+      },
+      orderBy: {
+        Usage: 'desc',
+      },
+    });
+
+    return successResponse({ data });
+  } catch (error) {
+    return errorResponse('Failed to fetch Pokemon spreads data');
   }
+}

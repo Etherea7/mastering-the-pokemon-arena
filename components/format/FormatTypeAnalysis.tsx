@@ -251,12 +251,33 @@ export function FormatTypeChart({
                 </BarChart>
             </ResponsiveContainer>
         </div>
-        
-        <PokemonListDialog
-          open={!!selectedType}
-          onClose={() => setSelectedType(null)}
-          typeData={selectedType}
-        />
+
+        {/* Type badges below chart */}
+        <div className="flex flex-wrap gap-2 mt-4">
+            {typeDistribution.map((typeData) => {
+                const typeKey = typeData.type.toLowerCase() as keyof typeof typeColors;
+                return (
+                <Badge
+                    key={typeData.type}
+                    variant="secondary"
+                    className={cn(
+                    "text-sm cursor-pointer",
+                    typeColors[typeKey].bg,
+                    typeColors[typeKey].text
+                    )}
+                    onClick={() => setSelectedType(typeData)}
+                >
+                    {typeData.type}: {typeData.count} ({typeData.usagePercent.toFixed(1)}%)
+                </Badge>
+                );
+            })}
+            </div>
+
+            <PokemonListDialog
+            open={!!selectedType}
+            onClose={() => setSelectedType(null)}
+            typeData={selectedType}
+            />
       </CardContent>
     </Card>
   );

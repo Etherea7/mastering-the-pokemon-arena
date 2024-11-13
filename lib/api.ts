@@ -17,6 +17,7 @@ export const pokemonSpecificSchema = commonQuerySchema.extend({
   name: z.string(),
 });
 
+
 // Schema for spread queries with EV validation
 export const spreadQuerySchema = commonQuerySchema.extend({
   nature: z.string().optional(),
@@ -24,6 +25,9 @@ export const spreadQuerySchema = commonQuerySchema.extend({
   max_ev: z.coerce.number().int().min(0).max(252).optional(),
 });
 
+export const pokemonSpreadSpecificSchema = spreadQuerySchema.extend({
+  name: z.string(),
+});
 // Schema for counter queries
 export const counterQuerySchema = commonQuerySchema.extend({
   min_lose_rate: z.coerce.number().min(0).max(100).optional(),

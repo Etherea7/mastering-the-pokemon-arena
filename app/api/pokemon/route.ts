@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
     const sortedList = Array.from(expandedPokemonSet).sort((a, b) => a.localeCompare(b));
     
     return successResponse(sortedList);
-  } catch (error) {
+  } catch (error: any) {
     if (error instanceof z.ZodError) {
       return errorResponse('Invalid parameters provided');
     }
