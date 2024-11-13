@@ -4,22 +4,31 @@ import React, { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer } from 'recharts'
+import { 
+  RadarChart, 
+  PolarGrid, 
+  PolarAngleAxis, 
+  PolarRadiusAxis, 
+  Radar, 
+  ResponsiveContainer,
+  Legend, 
+  Tooltip 
+} from 'recharts'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import Image from 'next/image'
 
 interface RadarDataPoint {
   stat: string;
-  [key: string]: string | number; // Allow both string and number values
+  [key: string]: string | number;
 }
 
 interface PokemonStats {
   hp: number;
   attack: number;
   defense: number;
-  'special-attack': number;
-  'special-defense': number;
+  special_attack: number;
+  special_defense: number;
   speed: number;
 }
 
@@ -60,27 +69,19 @@ export default function PokemonTeamAnalyser() {
             allPokemon.map(async (pokemonName) => {
               try {
                 const response = await fetch(`/api/pokeapi/sprites/${encodeURIComponent(pokemonName)}`);
+                
                 if (!response.ok) {
                   console.error(`Failed to fetch data for ${pokemonName}`);
                   return null;
                 }
+
                 const data = await response.json();
-                
-                // Create a stats object with default values since the sprite endpoint doesn't return stats
-                // You might want to add stats to your API endpoint if needed
-                const stats: PokemonStats = {
-                  hp: 0,
-                  attack: 0,
-                  defense: 0,
-                  'special-attack': 0,
-                  'special-defense': 0,
-                  speed: 0
-                };
+                console.log('Pokemon data:', data); // Add this to debug
 
                 return {
-                  id: Date.now() + Math.random(), // Generate a unique ID since we don't have one from the API
+                  id: Date.now() + Math.random(), // Generate unique ID
                   name: data.name,
-                  stats: stats,
+                  stats: data.stats,
                   types: data.types,
                   sprite: data.sprite
                 };
@@ -113,8 +114,10 @@ export default function PokemonTeamAnalyser() {
   const getRadarData = (pokemonId: number | null) => {
     const pokemon = pokemonData.find(p => p.id === pokemonId);
     if (!pokemon) return [];
+    
+    // Transform stats into radar chart format with proper naming
     return Object.entries(pokemon.stats).map(([key, value]) => ({
-      stat: key,
+      stat: key.replace(/_/g, ' '), // Replace underscores with spaces
       [pokemon.name]: value,
     }));
   };
@@ -177,37 +180,44 @@ export default function PokemonTeamAnalyser() {
           </Card>
 
           <Card className="col-span-1 md:col-span-1">
-            <CardHeader>
-              <CardTitle>Comparative Radar Chart</CardTitle>
-            </CardHeader>
-            <CardContent className="h-[250px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <RadarChart data={radarData} >
-                  <PolarGrid />
-                  <PolarAngleAxis dataKey="stat" />
-                  <PolarRadiusAxis />
-                  {selectedPokemon1 && (
-                    <Radar
-                      name={pokemonData.find(p => p.id === selectedPokemon1)?.name}
-                      dataKey={pokemonData.find(p => p.id === selectedPokemon1)?.name || ''}
-                      stroke="#8884d8"
-                      fill="#8884d8"
-                      fillOpacity={0.6}
-                    />
-                  )}
-                  {selectedPokemon2 && (
-                    <Radar
-                      name={pokemonData.find(p => p.id === selectedPokemon2)?.name}
-                      dataKey={pokemonData.find(p => p.id === selectedPokemon2)?.name || ''}
-                      stroke="#82ca9d"
-                      fill="#82ca9d"
-                      fillOpacity={0.6}
-                    />
-                  )}
-                </RadarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+        <CardHeader>
+          <CardTitle>Comparative Radar Chart</CardTitle>
+        </CardHeader>
+        <CardContent className="h-[300px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <RadarChart data={radarData}>
+              <PolarGrid />
+              <PolarAngleAxis 
+                dataKey="stat" 
+                tick={{ fontSize: 12 }}
+                tickFormatter={(value) => value.split(' ').map(word => 
+                  word.charAt(0).toUpperCase() + word.slice(1)
+                ).join(' ')}
+              />
+              <PolarRadiusAxis angle={90} domain={[0, 255]} />
+              {selectedPokemon1 && (
+                <Radar
+                  name={pokemonData.find(p => p.id === selectedPokemon1)?.name}
+                  dataKey={pokemonData.find(p => p.id === selectedPokemon1)?.name || ''}
+                  stroke="#8884d8"
+                  fill="#8884d8"
+                  fillOpacity={0.6}
+                />
+              )}
+              {selectedPokemon2 && (
+                <Radar
+                  name={pokemonData.find(p => p.id === selectedPokemon2)?.name}
+                  dataKey={pokemonData.find(p => p.id === selectedPokemon2)?.name || ''}
+                  stroke="#82ca9d"
+                  fill="#82ca9d"
+                  fillOpacity={0.6}
+                />
+              )}
+              <Legend />
+            </RadarChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
 
           <Card className="col-span-1">
             <CardHeader>
