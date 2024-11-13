@@ -9,7 +9,7 @@ export async function GET(request: Request) {
 
     const where = buildWhereClause(filters);
     if (name) where.name = name;
-
+    console.log(where)
     const data = await prisma.pokemonItems.findMany({
       where,
       select: {

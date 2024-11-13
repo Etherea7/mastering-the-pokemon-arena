@@ -236,7 +236,14 @@ export function PokemonSetupModal({
       special_defense: 0,
       speed: 0
     },
-    stats: pokemon.stats
+    stats: pokemon.stats || {
+        hp: 0,
+        attack: 0,
+        defense: 0,
+        special_attack: 0,
+        special_defense: 0,
+        speed: 0
+      }
   });
   const [loading, setLoading] = useState(true);
 
@@ -246,10 +253,10 @@ export function PokemonSetupModal({
       try {
         // Fetch abilities, items, moves, and spreads in parallel
         const [abilitiesRes, itemsRes, movesRes, spreadsRes] = await Promise.all([
-          fetch(`/api/pokemon/abilities/${pokemon.name}?generation=${generation}&battle_format=${format}`),
-          fetch(`/api/pokemon/items/${pokemon.name}?generation=${generation}&battle_format=${format}`),
-          fetch(`/api/pokemon/moves/${pokemon.name}?generation=${generation}&battle_format=${format}`),
-          fetch(`/api/pokemon/spreads/${pokemon.name}?generation=${generation}&battle_format=${format}`)
+          fetch(`/api/pokemon/abilities?name=${pokemon.name}&generation=${generation}&battle_format=${format}`),
+          fetch(`/api/pokemon/items?name=${pokemon.name}&generation=${generation}&battle_format=${format}`),
+          fetch(`/api/pokemon/moves?name=${pokemon.name}&generation=${generation}&battle_format=${format}`),
+          fetch(`/api/pokemon/spreads?name=${pokemon.name}&generation=${generation}&battle_format=${format}`)
         ]);
 
         const [abilities, items, moves, spreads] = await Promise.all([
@@ -258,6 +265,7 @@ export function PokemonSetupModal({
           movesRes.json(),
           spreadsRes.json()
         ]);
+        console.log(abilities, items, moves, spreads);
 
         const aggregatedSetups = {
             ability: aggregateData(abilities.data || [], (item: AbilityData) => item.Ability),
@@ -350,45 +358,7 @@ export function PokemonSetupModal({
 
         <div className="grid grid-cols-2 gap-4">
           {/* Left column: Current setup */}
-          <div className="space-y-4">
-            <div>
-              <Label>Ability</Label>
-              <Select
-                value={currentSetup.ability}
-                onValueChange={(value) => setCurrentSetup(prev => ({ ...prev, ability: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select ability" />
-                </SelectTrigger>
-                <SelectContent>
-                  {recommendedSetups?.ability.map(({ name }) => (
-                    <SelectItem key={name} value={name}>
-                      {name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label>Item</Label>
-              <Select
-                value={currentSetup.item}
-                onValueChange={(value) => setCurrentSetup(prev => ({ ...prev, item: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select item" />
-                </SelectTrigger>
-                <SelectContent>
-                  {recommendedSetups?.item.map(({ name }) => (
-                    <SelectItem key={name} value={name}>
-                      {name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
+          <div className="space-y-4">         
             <div>
               <Label>Nature</Label>
               <Select
@@ -413,7 +383,7 @@ export function PokemonSetupModal({
 
             <div className="space-y-4">
               <Label>EVs</Label>
-              {Object.entries(currentSetup.evs).map(([stat, value]) => (
+              {currentSetup?.evs && Object.entries(currentSetup.evs).map(([stat, value]) => (
                 <div key={stat} className="space-y-2">
                   <div className="flex justify-between">
                     <span className="text-sm capitalize">
@@ -422,7 +392,7 @@ export function PokemonSetupModal({
                     <span className="text-sm">{value}</span>
                   </div>
                   <Slider
-                    value={[value]}
+                    value={[value || 0]}
                     min={0}
                     max={252}
                     step={4}
@@ -459,7 +429,7 @@ export function PokemonSetupModal({
                         className="mr-1 cursor-pointer"
                         onClick={() => setCurrentSetup(prev => ({ ...prev, ability: name }))}
                       >
-                        {name} ({(usage * 100).toFixed(1)}%)
+                        {name} ({(usage).toFixed(1)}%)
                       </Badge>
                     ))}
                   </div>
@@ -477,7 +447,7 @@ export function PokemonSetupModal({
                         className="mr-1 cursor-pointer"
                         onClick={() => setCurrentSetup(prev => ({ ...prev, item: name }))}
                       >
-                        {name} ({(usage * 100).toFixed(1)}%)
+                        {name} ({(usage).toFixed(1)}%)
                       </Badge>
                     ))}
                   </div>
@@ -500,7 +470,7 @@ export function PokemonSetupModal({
                       >
                         <div className="flex justify-between">
                           <span className="font-medium">{nature}</span>
-                          <span className="text-sm">({(usage * 100).toFixed(1)}%)</span>
+                          <span className="text-sm">({(usage).toFixed(1)}%)</span>
                         </div>
                         <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-2">
                           {Object.entries(evs).map(([stat, value]) => (
@@ -522,7 +492,7 @@ export function PokemonSetupModal({
                 <CardContent className="pt-6">
                   <h3 className="font-medium mb-2">Recommended Moves</h3>
                   <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-2">
+                    {/* <div className="grid grid-cols-2 gap-2">
                       {currentSetup.moves.map((move, index) => (
                         <Select
                           key={index}
@@ -539,13 +509,13 @@ export function PokemonSetupModal({
                           <SelectContent>
                             {recommendedSetups?.moves.map(({ name, usage }) => (
                               <SelectItem key={name} value={name}>
-                                {name} ({(usage * 100).toFixed(1)}%)
+                                {name} ({(usage).toFixed(1)}%)
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                       ))}
-                    </div>
+                    </div> */}
                     <div className="space-y-1">
                       {recommendedSetups?.moves.slice(0, 8).map(({ name, usage }) => (
                         <Badge

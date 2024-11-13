@@ -38,22 +38,22 @@ export async function GET(
         battle_format: query.battle_format,
       },
       select: {
-        ability: true,
-        usage: true,
+        Ability: true,
+        Usage: true,
       },
     });
 
     // Group abilities and calculate average usage
     const abilityMap = abilities.reduce((acc, curr) => {
-      if (!acc[curr.ability]) {
-        acc[curr.ability] = {
+      if (!acc[curr.Ability]) {
+        acc[curr.Ability] = {
           total: 0,
           count: 0
         };
       }
-      if (curr.usage) {
-        acc[curr.ability].total += curr.usage;
-        acc[curr.ability].count += 1;
+      if (curr.Usage) {
+        acc[curr.Ability].total += curr.Usage;
+        acc[curr.Ability].count += 1;
       }
       return acc;
     }, {} as Record<string, { total: number; count: number }>);
