@@ -1,3 +1,6 @@
+// Add this at the top with your other constants
+export const UNKNOWN_MOVE_COLOR = '#999999'; // Gray color for unknown moves
+
 export const GENERATION_RANGES = {
     'gen1': { start: 1, end: 151 },
     'gen2': { start: 152, end: 251 },

@@ -92,34 +92,44 @@ const regionalForms = {
 }
 
 function formatPokemonNameForApi(name: string): string {
+  // Helper function to capitalize the first letter of each word
+  const capitalize = (str: string) => str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+
+  // Capitalize the name for checking in `specialCases`
+  const formattedNameForSpecialCases = name
+    .split('-') // Split by hyphen
+    .map(word => capitalize(word)) // Capitalize each word
+    .join('-'); // Rejoin with hyphen
+
   // Check special cases first
-  if (specialCases[name]) {
-    return specialCases[name]
+  if (specialCases[formattedNameForSpecialCases]) {
+    return specialCases[formattedNameForSpecialCases];
   }
 
   // Handle forms that need to be removed
   for (const prefix of formSuffixesToRemove) {
     if (name.startsWith(prefix)) {
-      return prefix.slice(0, -1).toLowerCase()
+      return prefix.slice(0, -1).toLowerCase();
     }
   }
 
   // Handle regional forms
   for (const [form, region] of Object.entries(regionalForms)) {
     if (name.includes(form)) {
-      const baseName = name.split('-')[0].toLowerCase()
-      return `${baseName}-${region}`
+      const baseName = name.split('-')[0].toLowerCase();
+      return `${baseName}-${region}`;
     }
   }
 
   // Default formatting: lowercase and replace spaces with hyphens
-  let formattedName = name.toLowerCase().replace(/\s+/g, '-')
-  
-  // Remove special characters except hyphens
-  formattedName = formattedName.replace(/[^a-z0-9-]/g, '')
+  let formattedName = name.toLowerCase().replace(/\s+/g, '-');
 
-  return formattedName
+  // Remove special characters except hyphens
+  formattedName = formattedName.replace(/[^a-z0-9-]/g, '');
+
+  return formattedName;
 }
+
 
 export async function GET(
     request: Request,
@@ -154,7 +164,27 @@ export async function GET(
       }
       
       const data = await response.json()
+
+      // Fetch species data
+      let speciesResponse;
+      let flavorText = '';
+      try {
+        const speciesUrl = data.species.url;
+        speciesResponse = await fetch(speciesUrl);
+        const speciesData = await speciesResponse.json();
+
+        // Get the latest English flavor text
+        const englishFlavorText = speciesData.flavor_text_entries
+          .find((entry: any) => entry.language.name === 'en');
+
+        flavorText = englishFlavorText
+          ? englishFlavorText.flavor_text.replace(/\f/g, ' ') // Replace form feeds with spaces
+          : '';
+      } catch (error) {
+        console.error('Error fetching species data:', error);
+      }
       
+      // Return the full Pokémon data
       return NextResponse.json({
         name: pokemonName,
         sprite: data.sprites.front_default || '',
@@ -166,8 +196,9 @@ export async function GET(
           special_attack: data.stats[3].base_stat,
           special_defense: data.stats[4].base_stat,
           speed: data.stats[5].base_stat
-        }
-      })
+        },
+        description: flavorText // Add description field
+      });
   
     } catch (error) {
       console.error('Error fetching Pokemon data:', error)
@@ -177,3 +208,4 @@ export async function GET(
       )
     }
   }
+
