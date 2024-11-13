@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 interface Ability {
   ability: string;
@@ -44,27 +44,13 @@ export default function PokemonAbilitiesChart({
     fetchAbilities();
   }, [pokemonName, generation, format]);
 
-  const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white p-2 shadow-lg rounded-lg border">
-          <p className="font-medium">{payload[0].payload.ability}</p>
-          <p className="text-sm text-muted-foreground">
-            Usage: {payload[0].payload.usage}%
-          </p>
-        </div>
-      );
-    }
-    return null;
-  };
-
   if (!pokemonName || !generation || !format) {
     return (
       <Card>
         <CardHeader>
           <CardTitle>Abilities</CardTitle>
         </CardHeader>
-        <CardContent className="h-[200px] flex items-center justify-center">
+        <CardContent className="text-center py-6 text-muted-foreground">
           Select a Pokemon to view abilities
         </CardContent>
       </Card>
@@ -77,7 +63,7 @@ export default function PokemonAbilitiesChart({
         <CardHeader>
           <CardTitle>Abilities</CardTitle>
         </CardHeader>
-        <CardContent className="h-[200px] flex items-center justify-center">
+        <CardContent className="text-center py-6">
           Loading abilities...
         </CardContent>
       </Card>
@@ -89,36 +75,32 @@ export default function PokemonAbilitiesChart({
       <CardHeader>
         <CardTitle>Abilities Usage</CardTitle>
       </CardHeader>
-      <CardContent className="h-[200px]">
+      <CardContent>
         {abilities.length > 0 ? (
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={abilities}
-              layout="vertical"
-              margin={{ top: 5, right: 30, left: 80, bottom: 5 }}
-            >
-              <XAxis 
-                type="number" 
-                domain={[0, 100]}
-                tickFormatter={(value) => `${value}%`}
-              />
-              <YAxis 
-                type="category" 
-                dataKey="ability"
-                width={75}
-                style={{ fontSize: '0.875rem' }}
-              />
-              <Tooltip content={<CustomTooltip />} />
-              <Bar 
-                dataKey="usage" 
-                fill="#8884d8"
-                radius={[0, 4, 4, 0]}
-                barSize={20}
-              />
-            </BarChart>
-          </ResponsiveContainer>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[70%]">Ability</TableHead>
+                <TableHead className="w-[30%] text-right">Usage %</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {abilities.map((ability) => (
+                <TableRow key={ability.ability}>
+                  <TableCell className="font-medium">
+                    {ability.ability.split('-').map(word => 
+                      word.charAt(0).toUpperCase() + word.slice(1)
+                    ).join(' ')}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {ability.usage.toFixed(1)}%
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         ) : (
-          <div className="h-full flex items-center justify-center text-muted-foreground">
+          <div className="text-center py-6 text-muted-foreground">
             No ability data available
           </div>
         )}

@@ -23,7 +23,7 @@ export async function GET(
     // Format the name with first letter capitalized
     const formattedName = params.name.charAt(0).toUpperCase() + params.name.slice(1).toLowerCase();
 
-    // Get all data for this Pokemon first
+    // Get all data for this Pokemon
     const counters = await prisma.pokemonCounters.findMany({
       where: {
         name: formattedName,
@@ -42,10 +42,6 @@ export async function GET(
         mean: true,
         std_dev: true,
       },
-      orderBy: [
-        { year_month: 'desc' },
-        { lose_rate_against_opp: 'desc' },
-      ],
     });
 
     if (counters.length === 0) {
@@ -56,30 +52,73 @@ export async function GET(
       });
     }
 
-    // Get the most recent year_month's data
-    const latestYearMonth = counters[0].year_month;
-    const latestData = counters.filter(c => c.year_month === latestYearMonth);
-
     // Get unique generations and formats
     const availableGenerations = [...new Set(counters.map(c => c.generation))];
     const availableFormats = [...new Set(counters.map(c => c.battle_format))];
 
-    const processedCounters = latestData.map(counter => ({
-      opp_pokemon: counter.opp_pokemon,
-      lose_rate_against_opp: counter.lose_rate_against_opp || 0,
-      ko_percent: counter.ko_percent || 0,
-      switch_percent: counter.switch_percent || 0,
-      mean: counter.mean || 0,
-      std_dev: counter.std_dev || 0,
-    }));
+    // Get properly ordered date range
+    const dates = counters.map(c => c.year_month).sort();
+    const samplePeriod = {
+      start: dates[0],
+      end: dates[dates.length - 1]
+    };
+
+    // Aggregate data by opponent Pokemon
+    const aggregatedData = counters.reduce((acc, counter) => {
+      const key = counter.opp_pokemon;
+      if (!acc[key]) {
+        acc[key] = {
+          opp_pokemon: key,
+          lose_rate_sum: 0,
+          ko_percent_sum: 0,
+          switch_percent_sum: 0,
+          mean_sum: 0,
+          std_dev_sum: 0,
+          count: 0
+        };
+      }
+      
+      acc[key].lose_rate_sum += counter.lose_rate_against_opp || 0;
+      acc[key].ko_percent_sum += counter.ko_percent || 0;
+      acc[key].switch_percent_sum += counter.switch_percent || 0;
+      acc[key].mean_sum += counter.mean || 0;
+      acc[key].std_dev_sum += counter.std_dev || 0;
+      acc[key].count++;
+      
+      return acc;
+    }, {} as Record<string, {
+      opp_pokemon: string;
+      lose_rate_sum: number;
+      ko_percent_sum: number;
+      switch_percent_sum: number;
+      mean_sum: number;
+      std_dev_sum: number;
+      count: number;
+    }>);
+
+    // Calculate averages and format the data
+    const processedCounters = Object.values(aggregatedData)
+      .map(data => ({
+        opp_pokemon: data.opp_pokemon,
+        lose_rate_against_opp: Number((data.lose_rate_sum / data.count).toFixed(2)),
+        ko_percent: Number((data.ko_percent_sum / data.count).toFixed(2)),
+        switch_percent: Number((data.switch_percent_sum / data.count).toFixed(2)),
+        mean: Number((data.mean_sum / data.count).toFixed(2)),
+        std_dev: Number((data.std_dev_sum / data.count).toFixed(2)),
+        sample_size: data.count
+      }))
+      .sort((a, b) => b.lose_rate_against_opp - a.lose_rate_against_opp)
+      .slice(0, 10); // Get top 10 counters
+
+    const latestEntry = counters[0];
 
     return NextResponse.json({
       pokemon: formattedName,
-      generation: latestData[0].generation,
-      battle_format: latestData[0].battle_format,
-      year_month: latestYearMonth,
+      generation: latestEntry.generation,
+      battle_format: latestEntry.battle_format,
       available_generations: availableGenerations,
       available_formats: availableFormats,
+      sample_period: samplePeriod,
       data: processedCounters
     });
 
