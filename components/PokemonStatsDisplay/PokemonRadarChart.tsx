@@ -1,4 +1,3 @@
-// components/PokemonRadarChart.tsx
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
@@ -14,14 +13,23 @@ interface PokemonStats {
 
 interface PokemonRadarChartProps {
   pokemonName: string;
+  className?: string;
+}
+
+interface PokemonData {
+  stats: PokemonStats;
+  sprite: string;
+  description: string; // Add this
 }
 
 export default function PokemonRadarChart({ pokemonName }: PokemonRadarChartProps) {
   const [stats, setStats] = useState<PokemonStats | null>(null);
+  const [description, setDescription] = useState<string>('');
+  const [sprite, setSprite] = useState<string>('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    async function fetchPokemonStats() {
+    async function fetchPokemonData() {
       if (!pokemonName) return;
       
       setLoading(true);
@@ -29,20 +37,24 @@ export default function PokemonRadarChart({ pokemonName }: PokemonRadarChartProp
         const res = await fetch(`/api/pokeapi/sprites/${pokemonName}`);
         const data = await res.json();
         setStats(data.stats);
+        setSprite(data.sprite);
+        setDescription(data.description); // Add this
       } catch (error) {
-        console.error('Failed to fetch Pokemon stats:', error);
+        console.error('Failed to fetch Pokemon data:', error);
         setStats(null);
+        setSprite('');
+        setDescription('');
       } finally {
         setLoading(false);
       }
     }
 
-    fetchPokemonStats();
+    fetchPokemonData();
   }, [pokemonName]);
 
   if (!pokemonName || !stats) {
     return (
-      <Card>
+      <Card className="border-none bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <CardHeader>
           <CardTitle>Pokemon Stats</CardTitle>
         </CardHeader>
@@ -63,26 +75,56 @@ export default function PokemonRadarChart({ pokemonName }: PokemonRadarChartProp
   ];
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Base Stats - {pokemonName}</CardTitle>
-      </CardHeader>
-      <CardContent className="h-[400px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <RadarChart data={chartData}>
-            <PolarGrid />
-            <PolarAngleAxis dataKey="stat" />
-            <PolarRadiusAxis angle={30} domain={[0, 255]} />
-            <Radar
-              name="Stats"
-              dataKey="value"
-              stroke="#8884d8"
-              fill="#8884d8"
-              fillOpacity={0.6}
-            />
-          </RadarChart>
-        </ResponsiveContainer>
-      </CardContent>
-    </Card>
-  );
+    <div className="flex items-center justify-center gap-8 h-full">
+      {/* Radar Chart */}
+      <Card className="border-none bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <CardHeader className="text-center pb-4">
+          <CardTitle>
+            Base Stats - {pokemonName.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width={300} height={300}>
+            <RadarChart
+              data={chartData}
+              margin={{ top: 20, right: 30, bottom: 20, left: 30 }}
+            >
+              <PolarGrid gridType="circle" />
+              <PolarAngleAxis
+                dataKey="stat"
+                tick={{ fill: 'white', fontSize: 14 }}
+                dy={4}
+              />
+              <PolarRadiusAxis
+                angle={30}
+                domain={[0, 255]}
+                tick={{ fill: 'white' }}
+              />
+              <Radar
+                name="Stats"
+                dataKey="value"
+                stroke="rgb(147, 157, 238)"
+                fill="rgb(147, 157, 238)"
+                fillOpacity={0.3}
+              />
+            </RadarChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+  
+      {/* Pokémon Image and Description */}
+      <div className="flex flex-col items-center">
+        <img
+          src={sprite}
+          alt={pokemonName}
+          className="w-40 h-40 object-contain"
+        />
+        {description && (
+          <p className="text-center text-sm text-muted-foreground mt-4 max-w-xs">
+            {description}
+          </p>
+        )}
+      </div>
+    </div>
+  );  
 }

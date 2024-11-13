@@ -1,12 +1,12 @@
-'use client'
-
+'use client';
 import React, { useState } from 'react';
 import PokemonSelector from '@/components/PokemonStatsDisplay/PokemonSelector';
 import PokemonRadarChart from '@/components/PokemonStatsDisplay/PokemonRadarChart';
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import PokemonAbilitiesChart from '@/components/PokemonStatsDisplay/PokemonAbilitiesChart';
 import NetworkGraph from '@/components/PokemonStatsDisplay/NetworkGraph';
 import CounterMatrix from '@/components/PokemonStatsDisplay/CounterMatrix';
+import MovesAnalysis from '@/components/PokemonStatsDisplay/MovesAnalysis';
 
 export default function PokemonStats() {
   const [selectedPokemon, setSelectedPokemon] = useState('');
@@ -21,7 +21,7 @@ export default function PokemonStats() {
   return (
     <div className="container mx-auto p-4 space-y-8">
       <h1 className="text-2xl font-bold">Pokemon Stats</h1>
-      
+
       <PokemonSelector
         selectedPokemon={selectedPokemon}
         selectedGen={selectedGen}
@@ -40,10 +40,13 @@ export default function PokemonStats() {
           </Alert>
         ) : (
           <div className="space-y-8">
-            {/* Centered Radar Chart */}
+            {/* Radar Chart Section */}
             <div className="flex justify-center">
-              <div className="w-full max-w-2xl">
-                <PokemonRadarChart pokemonName={selectedPokemon} />
+              <div className="flex-1 max-w-xl">
+                <PokemonRadarChart
+                  pokemonName={selectedPokemon}
+                  className="[&_svg]:border-none"
+                />
               </div>
             </div>
 
@@ -56,7 +59,16 @@ export default function PokemonStats() {
                   format={selectedFormat}
                 />
               )}
-              <NetworkGraph 
+              <NetworkGraph
+                pokemonName={selectedPokemon}
+                generation={selectedGen}
+                format={selectedFormat}
+              />
+            </div>
+
+            {/* Move Usage */}
+            <div>
+              <MovesAnalysis
                 pokemonName={selectedPokemon}
                 generation={selectedGen}
                 format={selectedFormat}
@@ -64,15 +76,13 @@ export default function PokemonStats() {
             </div>
 
             {/* Full Width Matchups Section */}
-            {selectedPokemon && selectedGen && selectedFormat && (
-              <div className="w-full">
-                <CounterMatrix
-                  pokemonName={selectedPokemon}
-                  generation={selectedGen}
-                  battleFormat={selectedFormat}
-                />
-              </div>
-            )}
+            <div className="w-full">
+              <CounterMatrix
+                pokemonName={selectedPokemon}
+                generation={selectedGen}
+                battleFormat={selectedFormat}
+              />
+            </div>
           </div>
         )}
       </div>
