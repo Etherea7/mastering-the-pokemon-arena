@@ -70,7 +70,7 @@ export function UsageChart({ loading, chartData, selectedPokemon }: UsageChartPr
               content={({ active, payload, label }) => {
                 if (active && payload && payload.length) {
                   return (
-                    <div className="bg-white border rounded-lg shadow-lg p-3">
+                    <div className="bg-secondary border rounded-lg shadow-lg p-3">
                       <p className="font-medium text-sm mb-2">{label}</p>
                       <div className="space-y-1">
                         {payload
@@ -86,7 +86,7 @@ export function UsageChart({ loading, chartData, selectedPokemon }: UsageChartPr
                               />
                               <span className="text-sm font-medium">{entry.name}:</span>
                               <span className="text-sm">
-                                {entry.value ? `${(entry.value*100).toFixed(2)}%` : 'No data'}
+                                {entry.value ? `${(Number(entry.value)*100).toFixed(2)}%` : 'No data'}
                               </span>
                             </div>
                           ))}

@@ -30,6 +30,10 @@
     --chart-3: 45 70% 65%;      /* Gold */
     --chart-4: 290 60% 55%;     /* Light purple */
     --chart-5: 320 75% 60%;     /* Rose */
+    --team-1: var(--primary); /* Using pink/red from your theme */
+    --team-2: var(--accent);  /* Using golden accent */
+    --team-1-muted: color-mix(in srgb, var(--primary) 50%, transparent);
+    --team-2-muted: color-mix(in srgb, var(--accent) 50%, transparent);
   }
 
   .dark {
@@ -71,6 +75,10 @@
 }
 
 @layer utilities {
+  .team-1-bg { background-color: var(--team-1); }
+  .team-1-bg-muted { background-color: var(--team-1-muted); }
+  .team-2-bg { background-color: var(--team-2); }
+  .team-2-bg-muted { background-color: var(--team-2-muted); }
   .min-h-screen {
     min-height: 100vh; /* Fallback */
     min-height: 100dvh;
@@ -86,3 +94,4 @@
   image-rendering: -moz-crisp-edges;
   image-rendering: crisp-edges;
 }
+

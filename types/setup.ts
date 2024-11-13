@@ -1,14 +1,30 @@
 export interface PokemonSetup {
-    ability: string;
-    item: string;
-    moves: string[];
+    ability?: string;
+    item?: string;
+    moves?: string[];
     nature: Nature;
     evs: EVs;
     stats: PokemonStats;
   }
 
 
+  interface PokemonStats {
+    hp: number;
+    attack: number;
+    defense: number;
+    special_attack: number;
+    special_defense: number;
+    speed: number;
+  }
 
+export interface TeamMember {
+    slot: number;
+    name: string | null;
+    stats?: PokemonStats;
+    types?: string[];
+    sprite?: string;
+    setup?: PokemonSetup;
+  }
   interface PokemonStats {
     hp: number;
     attack: number;

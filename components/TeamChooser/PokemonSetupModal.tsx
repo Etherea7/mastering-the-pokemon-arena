@@ -126,7 +126,32 @@ const NATURES: Nature[] = [
   { name: 'Careful', increased: 'special_defense', decreased: 'special_attack' },
   { name: 'Quirky' }
 ];
+const MAX_TOTAL_EVS = 510;
 
+const isGen12 = (generation: string) => {
+  return generation === 'gen1' || generation === 'gen2';
+};
+
+const calculateTotalEVs = (evs: EVs): number => {
+  return Object.values(evs).reduce((sum, value) => sum + value, 0);
+};
+
+const validateNewEV = (
+  currentEVs: EVs, 
+  stat: keyof EVs, 
+  newValue: number
+): number | null => {
+  const currentTotal = calculateTotalEVs(currentEVs);
+  const difference = newValue - (currentEVs[stat] || 0);
+  
+  if (currentTotal + difference > MAX_TOTAL_EVS) {
+    // Calculate max allowed value for this stat
+    const remainingPoints = MAX_TOTAL_EVS - (currentTotal - currentEVs[stat]);
+    return Math.min(newValue, remainingPoints);
+  }
+  
+  return newValue;
+};
 // Pokemon stat calculation formula
 const calculateStat = (
   baseStat: number,
@@ -223,29 +248,65 @@ export function PokemonSetupModal({
   onSetupComplete
 }: PokemonSetupModalProps) {
   const [recommendedSetups, setRecommendedSetups] = useState<RecommendedSetup | null>(null);
-  const [currentSetup, setCurrentSetup] = useState<PokemonSetup>({
-    ability: '',
-    item: '',
-    moves: [],
-    nature: NATURES[0],
-    evs: {
+  const [currentSetup, setCurrentSetup] = useState<PokemonSetup>(() => {
+    const defaultEVs: EVs = {
       hp: 0,
       attack: 0,
       defense: 0,
       special_attack: 0,
       special_defense: 0,
       speed: 0
-    },
-    stats: pokemon.stats || {
-        hp: 0,
-        attack: 0,
-        defense: 0,
-        special_attack: 0,
-        special_defense: 0,
-        speed: 0
-      }
+    };
+
+    const defaultStats: PokemonStats = {
+      hp: pokemon.stats?.hp || 0,
+      attack: pokemon.stats?.attack || 0,
+      defense: pokemon.stats?.defense || 0,
+      special_attack: pokemon.stats?.special_attack || 0,
+      special_defense: pokemon.stats?.special_defense || 0,
+      speed: pokemon.stats?.speed || 0
+    };
+
+    return {
+      ability: '',
+      item: '',
+      moves: [],
+      nature: NATURES[0],
+      evs: defaultEVs,
+      stats: defaultStats
+    };
   });
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setCurrentSetup(prev => ({
+      ...prev,
+      stats: {
+        hp: pokemon.stats?.hp || 0,
+        attack: pokemon.stats?.attack || 0,
+        defense: pokemon.stats?.defense || 0,
+        special_attack: pokemon.stats?.special_attack || 0,
+        special_defense: pokemon.stats?.special_defense || 0,
+        speed: pokemon.stats?.speed || 0
+      }
+    }));
+  }, [pokemon]);
+
+
+  const handleEVChange = (stat: keyof EVs, newValue: number) => {
+    if (isGen12(generation)) return;
+    
+    const validatedValue = validateNewEV(currentSetup.evs, stat, newValue);
+    if (validatedValue !== null) {
+      setCurrentSetup(prev => ({
+        ...prev,
+        evs: {
+          ...prev.evs,
+          [stat]: validatedValue
+        }
+      }));
+    }
+  };
 
   useEffect(() => {
     const fetchRecommendedSetups = async () => {
@@ -278,19 +339,23 @@ export function PokemonSetupModal({
       
 
         // Set initial setup from most popular options
-        if (abilities.data?.[0]) setCurrentSetup(prev => ({ ...prev, ability: abilities.data[0].name }));
-        if (items.data?.[0]) setCurrentSetup(prev => ({ ...prev, item: items.data[0].name }));
-        if (moves.data) {
-          const topMoves = moves.data.slice(0, 4).map((move:any) => move.name);
-          setCurrentSetup(prev => ({ ...prev, moves: topMoves }));
-        }
-        if (spreads.data?.[0]) {
-          setCurrentSetup(prev => ({
-            ...prev,
-            nature: NATURES.find(n => n.name === spreads.data[0].nature) || NATURES[0],
-            evs: spreads.data[0].evs
-          }));
-        }
+        setCurrentSetup(prev => ({
+          ...prev,
+          ability: abilities.data?.[0]?.name || prev.ability,
+          item: items.data?.[0]?.name || prev.item,
+          moves: moves.data ? moves.data.slice(0, 4).map((move: any) => move.name) : prev.moves,
+          nature: spreads.data?.[0] ? 
+            (NATURES.find(n => n.name === spreads.data[0].Nature) || prev.nature) : 
+            prev.nature,
+          evs: spreads.data?.[0] ? {
+            hp: spreads.data[0].hp_ev,
+            attack: spreads.data[0].atk_ev,
+            defense: spreads.data[0].def_ev,
+            special_attack: spreads.data[0].spatk_ev,
+            special_defense: spreads.data[0].spdef_ev,
+            speed: spreads.data[0].spd_ev
+          } : prev.evs
+        }));
 
       } catch (error) {
         console.error('Failed to fetch recommended setups:', error);
@@ -306,6 +371,8 @@ export function PokemonSetupModal({
 
   // Update stats whenever nature or EVs change
   useEffect(() => {
+    if (!pokemon.stats || !currentSetup.evs) return;
+
     const newStats = {
       hp: calculateStat(pokemon.stats.hp, currentSetup.evs.hp, currentSetup.nature, 'hp'),
       attack: calculateStat(pokemon.stats.attack, currentSetup.evs.attack, currentSetup.nature, 'attack'),
@@ -382,32 +449,38 @@ export function PokemonSetupModal({
             </div>
 
             <div className="space-y-4">
-              <Label>EVs</Label>
-              {currentSetup?.evs && Object.entries(currentSetup.evs).map(([stat, value]) => (
-                <div key={stat} className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-sm capitalize">
-                      {stat.replace('_', ' ')}
-                    </span>
-                    <span className="text-sm">{value}</span>
-                  </div>
-                  <Slider
-                    value={[value || 0]}
-                    min={0}
-                    max={252}
-                    step={4}
-                    onValueChange={([newValue]) => {
-                      setCurrentSetup(prev => ({
-                        ...prev,
-                        evs: {
-                          ...prev.evs,
-                          [stat]: newValue
-                        }
-                      }));
-                    }}
-                  />
+              <div className="flex justify-between items-center">
+                <Label>EVs</Label>
+                <span className="text-sm text-muted-foreground">
+                  Total: {calculateTotalEVs(currentSetup.evs)}/510
+                </span>
+              </div>
+              
+              {isGen12(generation) ? (
+                <div className="text-sm text-muted-foreground italic">
+                  EVs are not available in Generation 1-2
                 </div>
-              ))}
+              ) : (
+                <>
+                  {Object.entries(currentSetup.evs).map(([stat, value]) => (
+                    <div key={stat} className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-sm capitalize">
+                          {stat.replace('_', ' ')}
+                        </span>
+                        <span className="text-sm">{value}</span>
+                      </div>
+                      <Slider
+                        value={[value]}
+                        min={0}
+                        max={252}
+                        step={4}
+                        onValueChange={([newValue]) => handleEVChange(stat as keyof EVs, newValue)}
+                      />
+                    </div>
+                  ))}
+                </>
+              )}
             </div>
 
             <Button onClick={handleSave} className="w-full">
@@ -418,6 +491,95 @@ export function PokemonSetupModal({
           {/* Right column: Recommendations */}
           <ScrollArea className="h-[600px]">
             <div className="space-y-4 p-4">
+
+            <Card>
+                <CardContent className="pt-6">
+                  <h3 className="font-medium mb-2">Calculated Stats</h3>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                    {Object.entries(currentSetup.stats).map(([stat, value]) => (
+                      <div key={stat} className="flex justify-between">
+                        <span className="capitalize text-muted-foreground">
+                          {stat.replace('_', ' ')}
+                        </span>
+                        <span className="font-medium">{Math.floor(value)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent className="pt-6">
+                  <h3 className="font-medium mb-2">Common Spreads</h3>
+                  <ScrollArea className="h-[300px]">
+                    <div className="space-y-4 pr-4">
+                      {recommendedSetups?.spreads.map(({ nature, evs, usage }, index) => (
+                        <div
+                          key={index}
+                          className={cn(
+                            "p-2 rounded-lg border cursor-pointer hover:bg-accent",
+                            isGen12(generation) && "opacity-50 pointer-events-none"
+                          )}
+                          onClick={() => {
+                            if (!isGen12(generation)) {
+                              setCurrentSetup(prev => ({
+                                ...prev,
+                                nature: NATURES.find(n => n.name === nature) || NATURES[0],
+                                evs
+                              }));
+                            }
+                          }}
+                        >
+                          <div className="flex justify-between">
+                            <span className="font-medium">{nature}</span>
+                            <span className="text-sm">({(usage).toFixed(1)}%)</span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-2">
+                            {Object.entries(evs).map(([stat, value]) => (
+                              <div key={stat} className="text-sm flex justify-between">
+                                <span className="capitalize text-muted-foreground">
+                                  {stat.replace('_', ' ')}
+                                </span>
+                                <span>{value}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+
+
+              <Card>
+                <CardContent className="pt-6">
+                  <h3 className="font-medium mb-2">Recommended Moves</h3>
+                  <div className="space-y-4">
+
+                    <div className="space-y-1">
+                      {recommendedSetups?.moves.slice(0, 8).map(({ name, usage }) => (
+                        <Badge
+                          key={name}
+                          variant={currentSetup.moves.includes(name) ? "default" : "secondary"}
+                          className="mr-1 cursor-pointer"
+                          onClick={() => {
+                            if (!currentSetup.moves.includes(name) && currentSetup.moves.length < 4) {
+                              setCurrentSetup(prev => ({
+                                ...prev,
+                                moves: [...prev.moves, name].slice(0, 4)
+                              }));
+                            }
+                          }}
+                        >
+                          {name} ({(usage * 100).toFixed(1)}%)
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
               <Card>
                 <CardContent className="pt-6">
                   <h3 className="font-medium mb-2">Recommended Abilities</h3>
@@ -454,106 +616,7 @@ export function PokemonSetupModal({
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardContent className="pt-6">
-                  <h3 className="font-medium mb-2">Common Spreads</h3>
-                  <div className="space-y-4">
-                    {recommendedSetups?.spreads.map(({ nature, evs, usage }, index) => (
-                      <div
-                        key={index}
-                        className="p-2 rounded-lg border cursor-pointer hover:bg-accent"
-                        onClick={() => setCurrentSetup(prev => ({
-                          ...prev,
-                          nature: NATURES.find(n => n.name === nature) || NATURES[0],
-                          evs
-                        }))}
-                      >
-                        <div className="flex justify-between">
-                          <span className="font-medium">{nature}</span>
-                          <span className="text-sm">({(usage).toFixed(1)}%)</span>
-                        </div>
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-2">
-                          {Object.entries(evs).map(([stat, value]) => (
-                            <div key={stat} className="text-sm flex justify-between">
-                              <span className="capitalize text-muted-foreground">
-                                {stat.replace('_', ' ')}
-                              </span>
-                              <span>{value}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="pt-6">
-                  <h3 className="font-medium mb-2">Recommended Moves</h3>
-                  <div className="space-y-4">
-                    {/* <div className="grid grid-cols-2 gap-2">
-                      {currentSetup.moves.map((move, index) => (
-                        <Select
-                          key={index}
-                          value={move}
-                          onValueChange={(value) => {
-                            const newMoves = [...currentSetup.moves];
-                            newMoves[index] = value;
-                            setCurrentSetup(prev => ({ ...prev, moves: newMoves }));
-                          }}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder={`Move ${index + 1}`} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {recommendedSetups?.moves.map(({ name, usage }) => (
-                              <SelectItem key={name} value={name}>
-                                {name} ({(usage).toFixed(1)}%)
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      ))}
-                    </div> */}
-                    <div className="space-y-1">
-                      {recommendedSetups?.moves.slice(0, 8).map(({ name, usage }) => (
-                        <Badge
-                          key={name}
-                          variant={currentSetup.moves.includes(name) ? "default" : "secondary"}
-                          className="mr-1 cursor-pointer"
-                          onClick={() => {
-                            if (!currentSetup.moves.includes(name) && currentSetup.moves.length < 4) {
-                              setCurrentSetup(prev => ({
-                                ...prev,
-                                moves: [...prev.moves, name].slice(0, 4)
-                              }));
-                            }
-                          }}
-                        >
-                          {name} ({(usage * 100).toFixed(1)}%)
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="pt-6">
-                  <h3 className="font-medium mb-2">Calculated Stats</h3>
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                    {Object.entries(currentSetup.stats).map(([stat, value]) => (
-                      <div key={stat} className="flex justify-between">
-                        <span className="capitalize text-muted-foreground">
-                          {stat.replace('_', ' ')}
-                        </span>
-                        <span className="font-medium">{Math.floor(value)}</span>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+              
             </div>
           </ScrollArea>
         </div>

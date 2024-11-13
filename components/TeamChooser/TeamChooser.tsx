@@ -15,6 +15,7 @@ import {cn} from "@/lib/utils";
 import { typeColors } from '@/constants/gendata';
 import { usePokemonData } from '@/hooks/usePokemonData';
 import { PokemonSetup } from '@/types/setup';
+import { TeamAnalysis } from './TeamAnalysis';
 
 interface PokemonStats {
   hp: number;
@@ -112,10 +113,13 @@ const USAGE_THRESHOLD = 50;
 export default function TeamChooser() {
   const [allPokemon, setAllPokemon] = useState<string[]>([]);
   const [selectedGen, setSelectedGen] = useState('gen9');
+  const [showAnalysis, setShowAnalysis] = useState(false);
   const [pokemonProgress, setPokemonProgress] = useState({ current: 0, total: 0 });
   const fetchedRef = useRef<{[key: string]: boolean}>({});
   const { cache, loading: cacheLoading, fetchPokemonBatch, getPokemonData } = usePokemonData();
   const [selectedFormat, setSelectedFormat] = useState('ou');
+  const [selectedSlotTeam1, setSelectedSlotTeam1] = useState<number | null>(null);
+  const [selectedSlotTeam2, setSelectedSlotTeam2] = useState<number | null>(null);
   const [setupModal, setSetupModal] = useState<{
     isOpen: boolean;
     team: 'team1' | 'team2';
@@ -143,6 +147,9 @@ export default function TeamChooser() {
     setSetupModal({ isOpen: true, team, slot });
   };
 
+  const handleAnalyzeClick = () => {
+    setShowAnalysis(true);
+  };
   // Add handler for setup completion
   const handleSetupComplete = (setup: PokemonSetup) => {
     if (!setupModal) return;
@@ -373,10 +380,10 @@ export default function TeamChooser() {
   const renderTeamSelection = (
     team: TeamMember[],
     recommendations: Recommendation[],
-    teamName: 'team1' | 'team2'
+    teamName: 'team1' | 'team2',
+    selectedSlot: number | null,
+    setSelectedSlot: (slot: number | null) => void
   ) => {
-    const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
-  
     return (
       <Card className="w-full">
         <CardHeader>
@@ -449,7 +456,7 @@ export default function TeamChooser() {
               </Button>
             </div>
           ))}
-  
+
           {recommendations.length > 0 && (
             <div className="mt-4">
               <h3 className="text-sm font-medium mb-2">Recommended Teammates:</h3>
@@ -472,7 +479,7 @@ export default function TeamChooser() {
               </div>
             </div>
           )}
-  
+
           <PokemonModalSelector
             open={selectedSlot !== null}
             onClose={() => setSelectedSlot(null)}
@@ -498,12 +505,32 @@ export default function TeamChooser() {
       </Card>
     );
   };
+  const renderHeader = () => (
+    <div className="flex justify-between items-center">
+      <h1 className="text-2xl font-bold">
+        {showAnalysis ? "Team Analysis" : "Pokemon Team Chooser"}
+      </h1>
+      {showAnalysis ? (
+        <Button 
+          onClick={() => setShowAnalysis(false)}
+          variant="outline"
+        >
+          Back to Team Selection
+        </Button>
+      ) : (
+        <Button 
+          onClick={handleAnalyzeClick} 
+          className="bg-primary"
+          disabled={![...team1, ...team2].some(member => member.name)}
+        >
+          Analyse Teams
+        </Button>
+      )}
+    </div>
+  );
 
-  return (
-    <div className="container mx-auto p-4 space-y-8">
-
-      <h1 className="text-2xl font-bold">Pokemon Team Chooser</h1>
-      
+  const renderTeamBuilder = () => (
+    <>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <Select value={selectedGen} onValueChange={setSelectedGen}>
           <SelectTrigger>
@@ -541,57 +568,67 @@ export default function TeamChooser() {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="space-y-8">
-            {renderTeamSelection(team1, recommendations1, 'team1')}
+            {renderTeamSelection(
+              team1, 
+              recommendations1, 
+              'team1',
+              selectedSlotTeam1,
+              setSelectedSlotTeam1
+            )}
           </div>
           <div className="space-y-8">
-            {renderTeamSelection(team2, recommendations2, 'team2')}
+            {renderTeamSelection(
+              team2, 
+              recommendations2, 
+              'team2',
+              selectedSlotTeam2,
+              setSelectedSlotTeam2
+            )}
           </div>
         </div>
       )}
 
-      <div className="flex justify-center">
-        <Button 
-          onClick={() => {
-            const team1String = team1.map(member => member.name).filter(Boolean).join(',');
-            const team2String = team2.map(member => member.name).filter(Boolean).join(',');
-            router.push(`/analyze-teams?team1=${encodeURIComponent(team1String)}&team2=${encodeURIComponent(team2String)}`);
-          }} 
-          className="bg-primary"
-        >
-          Analyse Teams
-        </Button>
-      </div>
-
       {setupModal && (
-    <PokemonSetupModal
-      open={true}
-      onClose={() => setSetupModal(null)}
-      pokemon={{
-        name: (setupModal.team === 'team1' ? team1 : team2).find(
-          member => member.slot === setupModal.slot
-        )?.name || '',  // Ensure we have a string for name
-        sprite: (setupModal.team === 'team1' ? team1 : team2).find(
-          member => member.slot === setupModal.slot
-        )?.sprite,
-        types: (setupModal.team === 'team1' ? team1 : team2).find(
-          member => member.slot === setupModal.slot
-        )?.types,
-        stats: (setupModal.team === 'team1' ? team1 : team2).find(
-          member => member.slot === setupModal.slot
-        )?.stats || {  // Provide default stats if none exist
-          hp: 0,
-          attack: 0,
-          defense: 0,
-          special_attack: 0,
-          special_defense: 0,
-          speed: 0
-        }
-      }}
-      generation={selectedGen}
-      format={selectedFormat}
-      onSetupComplete={handleSetupComplete}
-    />
-  )}
+        <PokemonSetupModal
+          open={true}
+          onClose={() => setSetupModal(null)}
+          pokemon={{
+            name: (setupModal.team === 'team1' ? team1 : team2).find(
+              member => member.slot === setupModal.slot
+            )?.name || '',
+            sprite: (setupModal.team === 'team1' ? team1 : team2).find(
+              member => member.slot === setupModal.slot
+            )?.sprite,
+            types: (setupModal.team === 'team1' ? team1 : team2).find(
+              member => member.slot === setupModal.slot
+            )?.types,
+            stats: (setupModal.team === 'team1' ? team1 : team2).find(
+              member => member.slot === setupModal.slot
+            )?.stats || {
+              hp: 0,
+              attack: 0,
+              defense: 0,
+              special_attack: 0,
+              special_defense: 0,
+              speed: 0
+            }
+          }}
+          generation={selectedGen}
+          format={selectedFormat}
+          onSetupComplete={handleSetupComplete}
+        />
+      )}
+    </>
+  );
+
+  return (
+    <div className="container mx-auto p-4 space-y-8">
+      {renderHeader()}
+      {showAnalysis ? (
+        <TeamAnalysis team1={team1} team2={team2} />
+      ) : (
+        renderTeamBuilder()
+      )}
     </div>
   );
 }
