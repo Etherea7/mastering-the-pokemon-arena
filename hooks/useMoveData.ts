@@ -18,7 +18,7 @@ interface MoveCache {
 
 const CACHE_KEY = 'pokemon-moves-cache';
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
-const MOVES_PER_BATCH = 20;
+const MOVES_PER_BATCH = 100;
 
 export function useMoveData() {
   const [moves, setMoves] = useState<Record<string, Move>>({});
