@@ -399,7 +399,7 @@ export default function TeamChooser() {
                 disabled={loading}
               >
                 {member.name ? (
-                  <div className="flex items-center gap-2 w-full">
+                  <div className="flex items-center gap-2 w-full motion-preset-slide-up">
                     {member.sprite && (
                       <div className="relative w-8 h-8">
                         <Image

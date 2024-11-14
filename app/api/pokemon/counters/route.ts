@@ -10,7 +10,7 @@ export async function GET(request: Request) {
       const [data, total] = await Promise.all([
         prisma.pokemonCounters.findMany({
           where: buildWhereClause(filters),
-          orderBy: { lose_rate_against_opp: 'desc' },
+          orderBy: { Lose_Rate_Against_Opp: 'desc' },
           ...pagination,
         }),
         prisma.pokemonCounters.count({

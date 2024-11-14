@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import Image from 'next/image';
 import { cn } from "@/lib/utils";
 import { typeColors } from '@/constants/gendata';
@@ -7,7 +9,9 @@ import { TeamMember } from "@/types/setup";
 import { StatComparison } from "./StatComparison";
 import { StatAverages } from "./StatAverages";
 import { TypeCoverage } from "./TypeCoverage";
-import { ChevronRight } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Legend } from 'recharts';
 
 interface TeamAnalysisProps {
   team1: TeamMember[];
@@ -21,61 +25,43 @@ interface SpeedRanking {
   team: number;
 }
 
-export function TeamAnalysis({ team1, team2 }: TeamAnalysisProps) {
-  const renderPokemonCard = (pokemon: TeamMember) => (
-    <div 
-      key={pokemon.slot}
-      className="flex flex-col items-center bg-background rounded-lg p-4 w-[140px] h-[140px] border shadow-sm"
-    >
-      <div className="flex-1 flex items-center justify-center">
-        {pokemon.sprite ? (
-          <div className="relative w-16 h-16">
-            <Image
-              src={pokemon.sprite}
-              alt={pokemon.name || ''}
-              fill
-              className="object-contain pixelated"
-            />
-          </div>
-        ) : (
-          <div className="w-16 h-16 bg-muted rounded-lg" />
-        )}
-      </div>
-      <div className="w-full text-center">
-        <span className="text-sm font-medium block truncate">
-          {pokemon.name || 'Empty'}
-        </span>
-        <div className="flex gap-1 justify-center mt-1">
-          {pokemon.types?.map(type => (
-            <Badge
-              key={type}
-              variant="secondary"
-              className={cn(
-                "text-xs",
-                typeColors[type.toLowerCase()]?.bg,
-                typeColors[type.toLowerCase()]?.text
-              )}
-            >
-              {type}
-            </Badge>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
+interface ComparedStats {
+  stat: string;
+  [key: string]: number | string;
+}
 
-  const renderTeamHeader = (team: TeamMember[], teamNumber: number) => {
+export function TeamAnalysis({ team1, team2 }: TeamAnalysisProps) {
+  const [selectedPokemon1, setSelectedPokemon1] = useState<string | null>(null);
+  const [selectedPokemon2, setSelectedPokemon2] = useState<string | null>(null);
+
+  const renderTeamHeader = (team: TeamMember[], teamNumber: number, selectedPokemon: string | null, onSelect: (name: string | null) => void) => {
     const bgColor = teamNumber === 1 ? 'bg-primary/10' : 'bg-accent/10';
     const borderColor = teamNumber === 1 ? 'border-primary/20' : 'border-accent/20';
   
     return (
       <div className={cn("rounded-lg p-6 border", bgColor, borderColor)}>
-        <h3 className="font-semibold mb-6">Team {teamNumber}</h3>
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="font-semibold">Team {teamNumber}</h3>
+          <RadioGroup
+            value={selectedPokemon || ""}
+            onValueChange={(value) => onSelect(value || null)}
+          >
+            {team.filter(p => p.name).map((pokemon) => (
+              <div key={pokemon.slot} className="flex items-center space-x-2">
+                <RadioGroupItem value={pokemon.name || ""} id={`team${teamNumber}-${pokemon.slot}`} />
+                <Label htmlFor={`team${teamNumber}-${pokemon.slot}`}>{pokemon.name}</Label>
+              </div>
+            ))}
+          </RadioGroup>
+        </div>
         <div className="grid grid-cols-4 gap-8">
           {team.map((pokemon) => (
             <div 
               key={pokemon.slot}
-              className="flex flex-col items-center"
+              className={cn(
+                "flex flex-col items-center",
+                selectedPokemon === pokemon.name && "ring-2 ring-offset-2 ring-primary rounded-lg motion-preset-wiggle"
+              )}
             >
               {pokemon.sprite ? (
                 <div className="relative w-20 h-20 mb-3">
@@ -120,6 +106,63 @@ export function TeamAnalysis({ team1, team2 }: TeamAnalysisProps) {
     );
   };
 
+  const getComparisonData = (): ComparedStats[] => {
+    const pokemon1 = team1.find(p => p.name === selectedPokemon1)?.stats;
+    const pokemon2 = team2.find(p => p.name === selectedPokemon2)?.stats;
+
+    if (!pokemon1 && !pokemon2) return [];
+
+    return [
+      { stat: 'HP', ...(pokemon1 && { [selectedPokemon1!]: pokemon1.hp }), ...(pokemon2 && { [selectedPokemon2!]: pokemon2.hp }) },
+      { stat: 'Attack', ...(pokemon1 && { [selectedPokemon1!]: pokemon1.attack }), ...(pokemon2 && { [selectedPokemon2!]: pokemon2.attack }) },
+      { stat: 'Defense', ...(pokemon1 && { [selectedPokemon1!]: pokemon1.defense }), ...(pokemon2 && { [selectedPokemon2!]: pokemon2.defense }) },
+      { stat: 'Sp. Attack', ...(pokemon1 && { [selectedPokemon1!]: pokemon1.special_attack }), ...(pokemon2 && { [selectedPokemon2!]: pokemon2.special_attack }) },
+      { stat: 'Sp. Defense', ...(pokemon1 && { [selectedPokemon1!]: pokemon1.special_defense }), ...(pokemon2 && { [selectedPokemon2!]: pokemon2.special_defense }) },
+      { stat: 'Speed', ...(pokemon1 && { [selectedPokemon1!]: pokemon1.speed }), ...(pokemon2 && { [selectedPokemon2!]: pokemon2.speed }) },
+    ];
+  };
+
+  const renderPokemonComparison = () => {
+    const comparisonData = getComparisonData();
+    if (!selectedPokemon1 && !selectedPokemon2) return null;
+
+    return (
+      <Card className="mt-8">
+        <CardHeader>
+          <CardTitle>Pokemon Comparison</CardTitle>
+        </CardHeader>
+        <CardContent className="h-[400px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <RadarChart data={comparisonData}>
+              <PolarGrid />
+              <PolarAngleAxis dataKey="stat" />
+              <PolarRadiusAxis />
+              {selectedPokemon1 && (
+                <Radar
+                  name={selectedPokemon1}
+                  dataKey={selectedPokemon1}
+                  stroke="hsl(var(--primary))"
+                  fill="hsl(var(--primary))"
+                  fillOpacity={0.3}
+                />
+              )}
+              {selectedPokemon2 && (
+                <Radar
+                  name={selectedPokemon2}
+                  dataKey={selectedPokemon2}
+                  stroke="hsl(var(--accent))"
+                  fill="hsl(var(--accent))"
+                  fillOpacity={0.3}
+                />
+              )}
+              <Legend />
+            </RadarChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+    );
+  };
+
   const renderSpeedRanking = () => {
     const allPokemon: SpeedRanking[] = [
       ...team1.map(p => ({
@@ -145,11 +188,9 @@ export function TeamAnalysis({ team1, team2 }: TeamAnalysisProps) {
         </CardHeader>
         <CardContent>
           <div className="relative px-8 py-4">
-            {/* Main Pokemon speed display */}
             <div className="flex items-end justify-between w-full min-h-[120px]">
               {allPokemon.map((pokemon, index) => (
-                <div key={index} className="flex flex-col items-center gap-3">
-                  {/* Pokemon sprite */}
+                <div key={index} className="flex flex-col items-center gap-3 motion-preset-slide-left">
                   <div className="relative w-16 h-16 flex-shrink-0">
                     {pokemon.sprite && (
                       <Image
@@ -160,7 +201,6 @@ export function TeamAnalysis({ team1, team2 }: TeamAnalysisProps) {
                       />
                     )}
                   </div>
-                  {/* Speed value */}
                   <div 
                     className={cn(
                       "min-w-[60px] text-center py-2 px-3 rounded-md",
@@ -170,23 +210,9 @@ export function TeamAnalysis({ team1, team2 }: TeamAnalysisProps) {
                   >
                     {pokemon.speed}
                   </div>
-  
-                  {/* Chevron */}
-                  {index < allPokemon.length - 1 && (
-                    <div 
-                      className="absolute top-[42px]" 
-                      style={{ 
-                        left: `calc(${(100 * (index + 1))/allPokemon.length}% - 12px)`
-                      }}
-                    >
-                      <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                  )}
                 </div>
               ))}
             </div>
-  
-            {/* Labels with decorative lines */}
             <div className="flex justify-between mt-6 text-sm">
               <div className="flex items-center gap-2">
                 <div className="h-px w-8 bg-muted-foreground/50" />
@@ -205,16 +231,14 @@ export function TeamAnalysis({ team1, team2 }: TeamAnalysisProps) {
 
   return (
     <div className="space-y-8">
-      {/* Team Headers */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {renderTeamHeader(team1, 1)}
-        {renderTeamHeader(team2, 2)}
+        {renderTeamHeader(team1, 1, selectedPokemon1, setSelectedPokemon1)}
+        {renderTeamHeader(team2, 2, selectedPokemon2, setSelectedPokemon2)}
       </div>
 
-      {/* Speed Ranking */}
+      {renderPokemonComparison()}
       {renderSpeedRanking()}
 
-      {/* Stats Comparison */}
       <Card>
         <CardHeader>
           <CardTitle>Team Comparison</CardTitle>
@@ -227,7 +251,6 @@ export function TeamAnalysis({ team1, team2 }: TeamAnalysisProps) {
         </CardContent>
       </Card>
 
-      {/* Type Coverage */}
       <TypeCoverage team1={team1} team2={team2} />
     </div>
   );

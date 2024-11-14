@@ -42,22 +42,22 @@ export async function GET(
     const teammates = await prisma.pokemonTeammates.findMany({
       where: whereClause,
       select: {
-        teammate: true,
-        usage: true,
+        Teammate: true,
+        Usage: true,
         year_month: true
       },
       orderBy: {
-        usage: 'desc'
+        Usage: 'desc'
       }
     });
 
     // Group by teammate and take highest usage
     const teammateMap = new Map();
     teammates.forEach(t => {
-      if (!teammateMap.has(t.teammate) || teammateMap.get(t.teammate).usage < t.usage) {
-        teammateMap.set(t.teammate, {
-          name: t.teammate,
-          usage: t.usage ? Number(t.usage.toFixed(2)) : 0,
+      if (!teammateMap.has(t.Teammate) || (t.Usage !== null && teammateMap.get(t.Teammate).Usage < t.Usage)) {
+        teammateMap.set(t.Teammate, {
+          name: t.Teammate,
+          usage: t.Usage ? Number(t.Usage.toFixed(2)) : 0,
           year_month: t.year_month
         });
       }

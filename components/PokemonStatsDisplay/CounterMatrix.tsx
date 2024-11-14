@@ -1,21 +1,36 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import { typeColors } from '@/constants/gendata';
+import { usePokemonData } from '@/hooks/usePokemonData';
+import Image from 'next/image';
+
+interface Counter {
+  opp_pokemon: string;
+  lose_rate_against_opp: number;
+  ko_percent: number;
+  switch_percent: number;
+}
 
 interface CounterMatrixProps {
   pokemonName: string;
   generation?: string;
-  battleFormat?: string;
+  format?: string;
+  onPokemonSelect: (name: string) => void;
 }
 
-const CounterMatrix = ({ 
-  pokemonName,
-  generation,
-  battleFormat
-}: CounterMatrixProps) => {
-  const [countersData, setCountersData] = useState([]);
+export function CounterMatrix({ 
+  pokemonName, 
+  generation, 
+  format,
+  onPokemonSelect
+}: CounterMatrixProps) {
+  const [countersData, setCountersData] = useState<Counter[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { cache } = usePokemonData();
 
   useEffect(() => {
     async function fetchCounterData() {
@@ -25,15 +40,16 @@ const CounterMatrix = ({
       try {
         const queryParams = new URLSearchParams({
           generation: generation || 'gen9',
-          battle_format: battleFormat || 'ou',
+          battle_format: format?.toLowerCase() || 'ou',
         });
 
         const response = await fetch(`/api/pokemon/counters/${pokemonName}?${queryParams}`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch counter data');
-        }
         const data = await response.json();
-        console.log('Fetched data:', data); // Debug log
+        
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to fetch counter data');
+        }
+        
         setCountersData(data.data || []);
       } catch (err) {
         console.error('Error fetching counter data:', err);
@@ -44,11 +60,90 @@ const CounterMatrix = ({
     }
 
     fetchCounterData();
-  }, [pokemonName, generation, battleFormat]);
+  }, [pokemonName, generation, format]);
+
+  const formatPokemonName = (name: string) => {
+    return name.split('-').map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' ');
+  };
+
+  const processedData = countersData
+    .sort((a, b) => b.lose_rate_against_opp - a.lose_rate_against_opp);
+
+  const strongestCounters = processedData.slice(0, 4);
+  const weakestCounters = [...processedData]
+    .sort((a, b) => a.lose_rate_against_opp - b.lose_rate_against_opp)
+    .slice(0, 4);
+
+  const renderPokemonCard = (counter: Counter, isStrong: boolean) => (
+    <div 
+      key={counter.opp_pokemon}
+      onClick={() => onPokemonSelect(counter.opp_pokemon)}
+      className={cn(
+        "flex items-center justify-between p-2 rounded-lg border",
+        "cursor-pointer transition-colors duration-200",
+        isStrong ? "bg-red-950/50 border-red-800" : "bg-green-950/50 border-green-800",
+        "hover:bg-opacity-75"
+      )}
+    >
+      <div className="flex items-center gap-2">
+        {cache[counter.opp_pokemon.toLowerCase()]?.sprite && (
+          <div className="relative w-10 h-10">
+            <Image
+              src={cache[counter.opp_pokemon.toLowerCase()].sprite}
+              alt={counter.opp_pokemon}
+              width={40}
+              height={40}
+              className="pixelated"
+            />
+          </div>
+        )}
+        <div>
+          <span className="font-medium text-foreground">
+            {formatPokemonName(counter.opp_pokemon)}
+          </span>
+          <div className="flex gap-1">
+            {cache[counter.opp_pokemon.toLowerCase()]?.types?.map(type => (
+              <Badge
+                key={type}
+                variant="secondary"
+                className={cn(
+                  "text-xs",
+                  typeColors[type.toLowerCase()]?.bg,
+                  typeColors[type.toLowerCase()]?.text
+                )}
+              >
+                {type}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div className="text-sm text-right">
+        <div className="text-foreground">
+          {isStrong ? 'Win' : 'Loss'}: {counter.lose_rate_against_opp.toFixed(1)}%
+        </div>
+        <div className="text-muted-foreground">
+          KO: {counter.ko_percent.toFixed(1)}% / Switch: {counter.switch_percent.toFixed(1)}%
+        </div>
+      </div>
+    </div>
+  );
+
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="text-center">Loading matchups...</div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (error) {
     return (
-      <Card className="w-full bg-card">
+      <Card>
         <CardContent className="pt-6">
           <Alert variant="destructive">
             <AlertDescription>{error}</AlertDescription>
@@ -58,44 +153,8 @@ const CounterMatrix = ({
     );
   }
 
-  if (loading) {
-    return (
-      <Card className="w-full bg-card">
-        <CardContent className="flex items-center justify-center h-48">
-          <div className="text-lg text-foreground">Loading counter data...</div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (!countersData.length) {
-    return (
-      <Card className="w-full bg-card">
-        <CardContent className="flex items-center justify-center h-48">
-          <div className="text-lg text-foreground">No counter data available</div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // Calculate aggregated data
-  const processedData = countersData
-    .sort((a, b) => b.lose_rate_against_opp - a.lose_rate_against_opp);
-
-  // Get top 4 strongest counters and weakest matchups
-  const strongestCounters = processedData.slice(0, 4);
-  const weakestCounters = [...processedData]
-    .sort((a, b) => a.lose_rate_against_opp - b.lose_rate_against_opp)
-    .slice(0, 4);
-
-  const formatPokemonName = (name) => {
-    return name.split('-').map(word => 
-      word.charAt(0).toUpperCase() + word.slice(1)
-    ).join(' ');
-  };
-
   return (
-    <Card className="w-full bg-card">
+    <Card>
       <CardHeader>
         <CardTitle className="text-lg font-bold text-center text-foreground">
           {formatPokemonName(pokemonName)} Matchups
@@ -103,55 +162,21 @@ const CounterMatrix = ({
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-2 gap-4">
-          {/* Strong Against (Counters) Section */}
           <div className="space-y-4">
             <h3 className="text-sm font-semibold text-red-400">
               Strong Counters
             </h3>
-            {strongestCounters.map((counter) => (
-              <div 
-                key={counter.opp_pokemon}
-                className="flex items-center justify-between p-2 rounded-lg bg-red-950/50 border border-red-800"
-              >
-                <span className="font-medium text-foreground">
-                  {formatPokemonName(counter.opp_pokemon)}
-                </span>
-                <div className="text-sm text-right">
-                  <div className="text-foreground">Win: {counter.lose_rate_against_opp.toFixed(1)}%</div>
-                  <div className="text-muted-foreground">
-                    KO: {counter.ko_percent.toFixed(1)}% / Switch: {counter.switch_percent.toFixed(1)}%
-                  </div>
-                </div>
-              </div>
-            ))}
+            {strongestCounters.map(counter => renderPokemonCard(counter, true))}
           </div>
 
-          {/* Weak Against Section */}
           <div className="space-y-4">
             <h3 className="text-sm font-semibold text-green-400">
               Weak Matchups
             </h3>
-            {weakestCounters.map((counter) => (
-              <div 
-                key={counter.opp_pokemon}
-                className="flex items-center justify-between p-2 rounded-lg bg-green-950/50 border border-green-800"
-              >
-                <span className="font-medium text-foreground">
-                  {formatPokemonName(counter.opp_pokemon)}
-                </span>
-                <div className="text-sm text-right">
-                  <div className="text-foreground">Loss: {counter.lose_rate_against_opp.toFixed(1)}%</div>
-                  <div className="text-muted-foreground">
-                    KO: {counter.ko_percent.toFixed(1)}% / Switch: {counter.switch_percent.toFixed(1)}%
-                  </div>
-                </div>
-              </div>
-            ))}
+            {weakestCounters.map(counter => renderPokemonCard(counter, false))}
           </div>
         </div>
       </CardContent>
     </Card>
   );
-};
-
-export default CounterMatrix;
+}

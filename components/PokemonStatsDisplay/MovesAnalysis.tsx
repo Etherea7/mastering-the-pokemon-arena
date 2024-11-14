@@ -1,137 +1,91 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Treemap, ResponsiveContainer, Tooltip } from 'recharts';
-import { typeColors, UNKNOWN_MOVE_COLOR } from '@/constants/gendata';
+import { typeColors } from '@/constants/gendata';
 
-const MovesAnalysis = ({ pokemonName, generation, format }) => {
-  const [moveData, setMoveData] = useState(null);
-  const [moveTypes, setMoveTypes] = useState({});
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+interface MoveUsage {
+  move: string;
+  min: number;
+  max: number;
+  avgPoints: number;
+}
 
-  const capitalizeFirstLetter = (string) => {
-    return string
-      .split('-')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join('-');
-  };
+interface MoveType {
+  name: string;
+  type: string;
+}
 
-  const isSpecialMove = (moveName: string) => {
-    const name = moveName.toLowerCase();
-    return name === 'nothing' || 
-           name === 'other' || 
-           name === '(no move)';
-  };
+interface MovesTreeMapProps {
+  moveUsages: MoveUsage[];
+  moveTypes: Record<string, string>;
+}
 
-  const fetchMoveType = async (moveName) => {
-    if (isSpecialMove(moveName)) {
-      return 'unknown';
-    }
-    try {
-      const formattedName = moveName.toLowerCase().replace(/\s+/g, '-');
-      const response = await fetch(`/api/pokeapi/moves/${formattedName}`);
-      const data = await response.json();
-      return data.type;
-    } catch (error) {
-      console.error(`Failed to fetch type for move ${moveName}:`, error);
-      return 'normal'; // fallback to normal type
-    }
-  };
+interface ProcessedMoveUsage {
+  move: string;
+  min: number;
+  max: number;
+  avgPoints: number;
+}
 
+interface MovesTreeMapProps {
+  moveUsages: ProcessedMoveUsage[];
+  moveTypes: Record<string, string>;
+}
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const formattedName = capitalizeFirstLetter(pokemonName);
-        const url = `/api/pokemon/moves/aggregate?name=${encodeURIComponent(formattedName)}&generation=${encodeURIComponent(generation)}&format=${encodeURIComponent(format)}`;
-        
-        const response = await fetch(url);
-        const result = await response.json();
-        
-        if (!result.data) {
-          throw new Error('Invalid API response structure');
-        }
+const MovesTreeMap: React.FC<MovesTreeMapProps> = ({ moveUsages, moveTypes }) => {
+  console.log('moveUsages received:', moveUsages);
+  const validMoveUsages = Array.isArray(moveUsages) ? moveUsages : [];
+  // Transform the data for the treemap
+  const treeMapData = [{
+    name: 'moves',
+    children: moveUsages.map(moveData => ({
+      name: moveData.move,
+      size: moveData.max, // Using max usage for size
+      type: moveTypes[moveData.move] || 'normal'
+    }))
+  }];
 
-        // Fetch types for all moves
-        const moveTypePromises = Object.keys(result.data).map(async (moveName) => {
-          const type = await fetchMoveType(moveName);
-          return [moveName, type];
-        });
+  console.log('Transformed treeMapData:', treeMapData);
 
-        const typeResults = await Promise.all(moveTypePromises);
-        const typeMap = Object.fromEntries(typeResults);
-
-        setMoveTypes(typeMap);
-        setMoveData(result.data);
-      } catch (err) {
-        console.error('[Error] Failed to fetch move data:', err);
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (pokemonName && generation && format) {
-      fetchData();
-    }
-  }, [pokemonName, generation, format]);
-
-  const getTreemapData = () => {
-    if (!moveData) return [];
-
-    const moves = Object.entries(moveData)
-      .map(([move, usageData]) => {
-        const total = usageData.reduce((sum, data) => sum + data.usage, 0);
-        const average = total / usageData.length;
-        
-        return {
-          name: move,
-          size: Number(average.toFixed(2)),
-          monthsCount: usageData.length,
-          recentUsage: usageData
-            .sort((a, b) => b.year_month.localeCompare(a.year_month))[0]?.usage || 0,
-          type: moveTypes[move] || 'normal'
-        };
-      })
-      .filter(move => move.size > 0)
-      .sort((a, b) => b.size - a.size)
-      .slice(0, 15);
-
-    return [{
-      name: 'moves',
-      children: moves
-    }];
-  };
-
-  const CustomTooltip = ({ active, payload }) => {
+  // Custom tooltip component
+  const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length > 0) {
       const data = payload[0].payload;
-      const type = data.type || 'normal';
-      const typeColor = typeColors[type]?.color || '#A8A878';
+      const moveData = moveUsages.find(m => m.move === data.name);
+      const type = moveTypes[data.name] || 'normal';
       
       return (
         <div className="bg-white p-2 shadow-lg rounded-lg border">
           <p className="font-medium">{data.name}</p>
-          <p className="text-sm" style={{ color: typeColor }}>
-            Type: {capitalizeFirstLetter(type)}
+          <p className="text-sm" style={{ color: typeColors[type]?.color }}>
+            Type: {type.charAt(0).toUpperCase() + type.slice(1)}
           </p>
-          <p className="text-sm text-muted-foreground">
-            Average Usage: {data.size}%
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Recent Usage: {data.recentUsage}%
-          </p>
+          {moveData && (
+            <>
+              <p className="text-sm text-muted-foreground">
+                Usage Range: {moveData.min.toFixed(1)}% - {moveData.max.toFixed(1)}%
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Data Points: {moveData.avgPoints}
+              </p>
+            </>
+          )}
         </div>
       );
     }
     return null;
   };
 
-  const CustomContent = ({ root, depth, x, y, width, height, index, name, size, type }) => {
-    const moveType = type || 'normal';
-    const color = moveType === 'unknown' ? UNKNOWN_MOVE_COLOR : (typeColors[moveType]?.color || '#A8A878');
+  // Custom content renderer for the treemap boxes
+  const CustomContent = ({
+    x = 0,
+    y = 0,
+    width = 0,
+    height = 0,
+    name = '',
+    type = 'normal'
+  }: any) => {
+    const color = typeColors[type]?.color || typeColors.normal.color;
     
     return (
       <g>
@@ -150,71 +104,69 @@ const MovesAnalysis = ({ pokemonName, generation, format }) => {
             x={x + width / 2}
             y={y + height / 2}
             textAnchor="middle"
-            dominantBaseline="middle"
             fill="#fff"
             className="text-xs font-medium"
             style={{ textShadow: '1px 1px 1px rgba(0,0,0,0.5)' }}
           >
-            <tspan x={x + width / 2} dy="-0.5em">{name}</tspan>
-            <tspan x={x + width / 2} dy="1.2em">{size}%</tspan>
+            {name}
           </text>
         )}
       </g>
     );
   };
 
-  if (loading) {
+  if (validMoveUsages.length === 0) {
     return (
-      <Card className="w-full">
+      <Card>
         <CardContent className="p-6">
-          <div className="text-center">Loading move data...</div>
+          <div className="text-center text-muted-foreground">
+            No move usage data available
+          </div>
         </CardContent>
       </Card>
     );
   }
-
-  if (error) {
-    return (
-      <Card className="w-full">
-        <CardContent className="p-6">
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  const treemapData = getTreemapData();
-
-  if (!moveData || treemapData[0]?.children.length === 0) {
-    return (
-      <Card className="w-full">
-        <CardContent className="p-6">
-          <Alert>
-            <AlertDescription>No move data available for {capitalizeFirstLetter(pokemonName)}</AlertDescription>
-          </Alert>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
-    <Card className="w-full">
+    <Card>
       <CardHeader>
-        <CardTitle>Move Usage Distribution for {capitalizeFirstLetter(pokemonName)}</CardTitle>
+        <CardTitle>Move Usage Distribution</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="h-[500px] w-full">
           <ResponsiveContainer>
             <Treemap
-              data={treemapData}
+              data={treeMapData}
               dataKey="size"
               aspectRatio={4/3}
               stroke="#fff"
-              content={CustomContent}
             >
-              <Tooltip content={CustomTooltip} />
+              <Tooltip content={({ active, payload }) => {
+                if (active && payload && payload.length > 0) {
+                  const data = payload[0].payload;
+                  const moveData = validMoveUsages.find(m => m.move === data.name);
+                  const type = moveTypes[data.name] || 'normal';
+                  
+                  return (
+                    <div className="bg-white p-2 shadow-lg rounded-lg border">
+                      <p className="font-medium">{data.name}</p>
+                      <p className="text-sm" style={{ color: typeColors[type]?.color }}>
+                        Type: {type.charAt(0).toUpperCase() + type.slice(1)}
+                      </p>
+                      {moveData && (
+                        <>
+                          <p className="text-sm text-muted-foreground">
+                            Usage Range: {moveData.min.toFixed(1)}% - {moveData.max.toFixed(1)}%
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Data Points: {moveData.avgPoints}
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  );
+                }
+                return null;
+              }} />
             </Treemap>
           </ResponsiveContainer>
         </div>
@@ -223,4 +175,4 @@ const MovesAnalysis = ({ pokemonName, generation, format }) => {
   );
 };
 
-export default MovesAnalysis;
+export default MovesTreeMap;

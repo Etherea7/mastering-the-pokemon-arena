@@ -192,7 +192,7 @@ export default function TypeChart() {
         <table className="w-full border-collapse" > 
           <thead>
             <tr>
-              <th className="p-1.5 border text-sm sticky left-0 bg-white z-10">Def →<br/>Atk ↓</th> {/* Reduced padding, sticky header */}
+              <th className="p-1.5 border text-sm sticky left-0 z-10">Def →<br/>Atk ↓</th> {/* Reduced padding, sticky header */}
               {typeData.map(type => (
                 <th 
                   key={type.name}
@@ -236,7 +236,7 @@ export default function TypeChart() {
                   return (
                     <td 
                       key={defenderType.name}
-                      className="p-1.5 border text-center transition-opacity duration-200 text-sm" // Reduced padding
+                      className="p-1.5 border text-center transition-opacity duration-200 text-sm text-black" // Reduced padding
                       style={{
                         backgroundColor: 
                           effectiveness === 2 ? '#6c6' :

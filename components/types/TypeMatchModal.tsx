@@ -116,7 +116,7 @@ export default function TypeMatchModal({ isOpen, onOpenChange, selectedTypes }: 
             {matchingPokemon.map((pokemon) => (
               <div
                 key={pokemon.name}
-                className="flex flex-col items-center p-2 border rounded-lg bg-white"
+                className="flex flex-col items-center p-2 border rounded-lg hover:shadow-md transition-shadow motion-preset-pop"
               >
                 <div className="w-24 h-24 relative">
                   <Image

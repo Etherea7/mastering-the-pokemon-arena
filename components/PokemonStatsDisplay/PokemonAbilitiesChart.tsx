@@ -1,61 +1,95 @@
-import React, { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Ability {
-  ability: string;
-  usage: number;
+  ability: {
+    name: string;
+    url: string;
+  };
+  is_hidden?: boolean;
 }
 
-interface PokemonAbilitiesChartProps {
+interface AbilityDetails {
+  name: string;
+  effect: string;
+  usage?: number;
+  is_hidden?: boolean;
+
+}
+
+interface PokemonAbilitiesProps {
+  abilities: Ability[];
   pokemonName: string;
   generation: string;
   format: string;
 }
 
-export default function PokemonAbilitiesChart({ 
+export function PokemonAbilities({ 
+  abilities, 
   pokemonName,
   generation,
   format 
-}: PokemonAbilitiesChartProps) {
-  const [abilities, setAbilities] = useState<Ability[]>([]);
-  const [loading, setLoading] = useState(false);
+}: PokemonAbilitiesProps) {
+  const [abilityDetails, setAbilityDetails] = useState<AbilityDetails[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchAbilities() {
-      if (!pokemonName || !generation || !format) return;
-      
+    async function fetchAbilityDetails() {
       setLoading(true);
       try {
-        const res = await fetch(`/api/pokemon/abilities/${pokemonName}?generation=${generation}&battle_format=${format}`);
-        const data = await res.json();
-        
-        if (data.data) {
-          setAbilities(data.data);
-        }
+        // Fetch ability descriptions from PokeAPI
+        const abilityPromises = abilities.map(async ({ ability, is_hidden }) => {
+          const response = await fetch(ability.url);
+          const data = await response.json();
+          
+          // Get English effect text
+          const effectEntry = data.effect_entries.find((entry: any) => 
+            entry.language.name === 'en'
+          );
+          
+          return {
+            name: ability.name,
+            effect: effectEntry?.effect || 'No description available',
+            is_hidden
+          };
+        });
+
+        // Fetch usage data from your API
+        const usageResponse = await fetch(
+          `/api/pokemon/abilities/${pokemonName}?generation=${generation}&battle_format=${format}`
+        );
+        const usageData = await usageResponse.json();
+
+        // Combine ability details with usage data
+        const details = await Promise.all(abilityPromises);
+        const detailsWithUsage = details.map(detail => {
+          const usageInfo = usageData.data?.find((d: any) => 
+            d.ability.toLowerCase() === detail.name.replace(/-/g, ' ')
+          );
+          return {
+            ...detail,
+            usage: usageInfo?.usage
+          };
+        });
+
+        setAbilityDetails(detailsWithUsage);
       } catch (error) {
-        console.error('Failed to fetch abilities:', error);
-        setAbilities([]);
+        console.error('Error fetching ability details:', error);
       } finally {
         setLoading(false);
       }
     }
 
-    fetchAbilities();
-  }, [pokemonName, generation, format]);
+    fetchAbilityDetails();
+  }, [abilities, pokemonName, generation, format]);
 
-  if (!pokemonName || !generation || !format) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Abilities</CardTitle>
-        </CardHeader>
-        <CardContent className="text-center py-6 text-muted-foreground">
-          Select a Pokemon to view abilities
-        </CardContent>
-      </Card>
-    );
-  }
+  const formatAbilityName = (name: string) => {
+    return name.split('-').map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' ');
+  };
 
   if (loading) {
     return (
@@ -63,8 +97,12 @@ export default function PokemonAbilitiesChart({
         <CardHeader>
           <CardTitle>Abilities</CardTitle>
         </CardHeader>
-        <CardContent className="text-center py-6">
-          Loading abilities...
+        <CardContent>
+          <div className="space-y-4">
+            {[1, 2].map(i => (
+              <Skeleton key={i} className="h-24" />
+            ))}
+          </div>
         </CardContent>
       </Card>
     );
@@ -73,37 +111,32 @@ export default function PokemonAbilitiesChart({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Abilities Usage</CardTitle>
+        <CardTitle>Abilities</CardTitle>
       </CardHeader>
       <CardContent>
-        {abilities.length > 0 ? (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[70%]">Ability</TableHead>
-                <TableHead className="w-[30%] text-right">Usage %</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {abilities.map((ability) => (
-                <TableRow key={ability.ability}>
-                  <TableCell className="font-medium">
-                    {ability.ability.split('-').map(word => 
-                      word.charAt(0).toUpperCase() + word.slice(1)
-                    ).join(' ')}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {ability.usage.toFixed(1)}%
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        ) : (
-          <div className="text-center py-6 text-muted-foreground">
-            No ability data available
-          </div>
-        )}
+        <div className="space-y-4">
+          {abilityDetails.map((ability) => (
+            <div
+              key={ability.name}
+              className="p-4 rounded-lg border bg-card"
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <h3 className="font-semibold">
+                  {formatAbilityName(ability.name)}
+                </h3>
+                {ability.is_hidden && (
+                  <Badge variant="secondary">Hidden</Badge>
+                )}
+                {ability.usage !== undefined && (
+                  <Badge variant="outline">{ability.usage.toFixed(1)}% Usage</Badge>
+                )}
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {ability.effect}
+              </p>
+            </div>
+          ))}
+        </div>
       </CardContent>
     </Card>
   );

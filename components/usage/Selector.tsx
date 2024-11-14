@@ -21,7 +21,8 @@ import {
 } from "@/components/ui/pagination"
 import { Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
-
+import { usePokemonData } from '@/hooks/usePokemonData'
+import { typeColors } from '@/constants/gendata'
 
 interface PokemonSelectorProps {
     selectedPokemon: string[]
@@ -51,51 +52,51 @@ interface PokemonSelectorProps {
   
 
 
-// Helper function to get sprite URL from PokeAPI
-function chunkArray<T>(array: T[], size: number): T[][] {
-    const chunks: T[][] = [];
-    for (let i = 0; i < array.length; i += size) {
-      chunks.push(array.slice(i, i + size));
-    }
-    return chunks;
-  }
+// // Helper function to get sprite URL from PokeAPI
+// function chunkArray<T>(array: T[], size: number): T[][] {
+//     const chunks: T[][] = [];
+//     for (let i = 0; i < array.length; i += size) {
+//       chunks.push(array.slice(i, i + size));
+//     }
+//     return chunks;
+//   }
   
-  // Helper function to add delay between requests
-  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-  // Modified getPokemonSprite function
-  async function getPokemonData(
-    name: string, 
-    signal: AbortSignal,
-    retries = 3
-  ): Promise<{ spriteUrl: string; types: string[] }> {
-    try {
-      const response = await fetch(
-        `/api/pokeapi/sprites/${encodeURIComponent(name)}`,
-        { signal }
-      );
+//   // Helper function to add delay between requests
+//   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+//   // Modified getPokemonSprite function
+//   async function getPokemonData(
+//     name: string, 
+//     signal: AbortSignal,
+//     retries = 3
+//   ): Promise<{ spriteUrl: string; types: string[] }> {
+//     try {
+//       const response = await fetch(
+//         `/api/pokeapi/sprites/${encodeURIComponent(name)}`,
+//         { signal }
+//       );
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+//       if (!response.ok) {
+//         throw new Error(`HTTP error! status: ${response.status}`);
+//       }
       
-      const data = await response.json();
-      return {
-        spriteUrl: data.sprite,
-        types: data.types
-      };
-    } catch (error: any) {
-      if (error.name === 'AbortError') {
-        throw error; // Re-throw abort errors
-      }
+//       const data = await response.json();
+//       return {
+//         spriteUrl: data.sprite,
+//         types: data.types
+//       };
+//     } catch (error: any) {
+//       if (error.name === 'AbortError') {
+//         throw error; // Re-throw abort errors
+//       }
       
-      if (retries > 0) {
-        await delay(1000);
-        return getPokemonData(name, signal, retries - 1);
-      }
-      console.error(`Error fetching Pokemon data for ${name}:`, error);
-      return { spriteUrl: '', types: [] };
-    }
-  }
+//       if (retries > 0) {
+//         await delay(1000);
+//         return getPokemonData(name, signal, retries - 1);
+//       }
+//       console.error(`Error fetching Pokemon data for ${name}:`, error);
+//       return { spriteUrl: '', types: [] };
+//     }
+//   }
   
   // TypeBadge component for consistent type display
   function TypeBadge({ type }: { type: string }) {
@@ -116,26 +117,6 @@ function chunkArray<T>(array: T[], size: number): T[][] {
   }
   
   // Type color mapping
-  const typeColors: { [key: string]: { bg: string, text: string } } = {
-    normal: { bg: "bg-gray-400", text: "text-white" },
-    fire: { bg: "bg-red-500", text: "text-white" },
-    water: { bg: "bg-blue-500", text: "text-white" },
-    electric: { bg: "bg-yellow-400", text: "text-black" },
-    grass: { bg: "bg-green-500", text: "text-white" },
-    ice: { bg: "bg-blue-200", text: "text-black" },
-    fighting: { bg: "bg-red-700", text: "text-white" },
-    poison: { bg: "bg-purple-500", text: "text-white" },
-    ground: { bg: "bg-amber-600", text: "text-white" },
-    flying: { bg: "bg-indigo-300", text: "text-black" },
-    psychic: { bg: "bg-pink-500", text: "text-white" },
-    bug: { bg: "bg-lime-500", text: "text-white" },
-    rock: { bg: "bg-yellow-700", text: "text-white" },
-    ghost: { bg: "bg-purple-700", text: "text-white" },
-    dragon: { bg: "bg-indigo-600", text: "text-white" },
-    dark: { bg: "bg-gray-700", text: "text-white" },
-    steel: { bg: "bg-gray-400", text: "text-white" },
-    fairy: { bg: "bg-pink-300", text: "text-black" },
-  };
   
 
 export function PokemonSelector({
@@ -155,10 +136,12 @@ export function PokemonSelector({
     const [currentPage, setCurrentPage] = useState(1)
     const itemsPerPage = 10
 
+
+    const { cache, loading: cacheLoading, fetchPokemonBatch } = usePokemonData()
+
     useEffect(() => {
         let isMounted = true;
-        let abortController = new AbortController();
-      
+
         const fetchPokemonList = async () => {
           if (!generation || !battleFormat) return;
           
@@ -171,12 +154,12 @@ export function PokemonSelector({
               year_month_lte: `${endYear}-${endMonth}`,
               ...(rating !== undefined && { rating: rating.toString() }),
             });
-      
+
             const response = await fetch(`/api/pokemon/usage?${params}`);
             const result = await response.json();
             
             if (!isMounted) return;
-      
+
             if (result.data && Array.isArray(result.data)) {
               const aggregatedData = result.data.reduce((acc: Map<string, AggregatedStats>, item: any) => {
                 if (!acc.has(item.name)) {
@@ -196,64 +179,44 @@ export function PokemonSelector({
                 return acc;
               }, new Map<string, AggregatedStats>());
               
-              const topPokemon: PokemonData[] = Array.from<[string, AggregatedStats]>(
-                aggregatedData.entries()
-              )
-                .map(([name, stats]) => ({
-                  name,
-                  usedCount: stats.realCount,
-                  averageUsage: stats.totalUsage / stats.totalCount,
-                  types: []
-                }))
+              const topPokemon = Array.from(aggregatedData.entries() as [string, AggregatedStats][])
+                .map(([name, stats]) => {
+                  const cachedData = cache[name];
+                  return {
+                    name,
+                    usedCount: stats.realCount,
+                    averageUsage: stats.totalUsage / stats.totalCount,
+                    types: cachedData?.types || [],
+                    spriteUrl: cachedData?.sprite
+                  };
+                })
                 .sort((a, b) => (b.averageUsage || 0) - (a.averageUsage || 0))
                 .slice(0, 200);
-      
-              if (!isMounted) return;
+
               setPokemonList(topPokemon);
-      
-              const BATCH_SIZE = 20;
-              const DELAY_BETWEEN_BATCHES = 50;
-              const pokemonChunks = chunkArray(topPokemon, BATCH_SIZE);
-      
-              for (let i = 0; i < pokemonChunks.length; i++) {
-                if (!isMounted || abortController.signal.aborted) {
-                  break;
-                }
-      
-                const chunk = pokemonChunks[i];
-                try {
-                  const updatedPokemonData = await Promise.all(
-                    chunk.map(async (pokemon: PokemonData) => {
-                      // Pass the abort signal to fetch
-                      const data = await getPokemonData(pokemon.name, abortController.signal);
-                      return {
-                        ...pokemon,
-                        spriteUrl: data.spriteUrl,
-                        types: data.types,
-                      };
-                    })
-                  );
-      
-                  if (!isMounted) break;
-                  
-                  setPokemonList((currentList: PokemonData[]) => {
-                    const newList = [...currentList];
-                    updatedPokemonData.forEach((updatedPokemon: PokemonData) => {
-                      const index = newList.findIndex(p => p.name === updatedPokemon.name);
-                      if (index !== -1) {
-                        newList[index] = updatedPokemon;
-                      }
-                    });
-                    return newList;
-                  });
-      
-                  await delay(DELAY_BETWEEN_BATCHES);
-                } catch (error: any) {
-                  if (error.name === 'AbortError') {
-                    console.log('Fetch aborted');
-                    break;
+
+              // Fetch data for uncached Pokemon
+              const uncachedPokemon = topPokemon
+                .filter(p => !cache[p.name])
+                .map(p => p.name);
+
+              if (uncachedPokemon.length > 0) {
+                await fetchPokemonBatch(
+                  uncachedPokemon,
+                  (current, total) => {
+                    // Progress callback if needed
                   }
-                  console.error('Error processing chunk:', error);
+                );
+
+                // Update the list with cached data
+                if (isMounted) {
+                  setPokemonList(prevList => 
+                    prevList.map(pokemon => ({
+                      ...pokemon,
+                      types: cache[pokemon.name]?.types || pokemon.types,
+                      spriteUrl: cache[pokemon.name]?.sprite || pokemon.spriteUrl
+                    }))
+                  );
                 }
               }
             }
@@ -264,14 +227,13 @@ export function PokemonSelector({
             if (isMounted) setLoading(false);
           }
         };
-      
-        fetchPokemonList();
-      
-        return () => {
-          isMounted = false;
-          abortController.abort();
-        };
-      }, [generation, battleFormat, startMonth, startYear, endMonth, endYear, rating]);
+
+    fetchPokemonList();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [generation, battleFormat, startMonth, startYear, endMonth, endYear, rating, cache, fetchPokemonBatch]);
       
       
 

@@ -1,18 +1,41 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { usePokemonData } from '@/hooks/usePokemonData';
+
+interface Teammate {
+  name: string;
+  usage: number;
+  sprite?: string;
+}
+
+interface Node {
+  x: number;
+  y: number;
+  pokemon: string;
+  usage?: number;
+  sprite?: string;
+}
 
 interface NetworkGraphProps {
   pokemonName: string;
-  generation?: string;
-  format?: string;
+  generation: string;
+  format: string;
+  onPokemonSelect: (name: string) => void;
 }
 
-const NetworkGraph = ({ pokemonName, generation, format }: NetworkGraphProps) => {
-  const [teammates, setTeammates] = useState([]);
+export function NetworkGraph({ 
+  pokemonName, 
+  generation, 
+  format,
+  onPokemonSelect
+}: NetworkGraphProps) {
+  const [teammates, setTeammates] = useState<Teammate[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [hoveredNode, setHoveredNode] = useState(null);
+  const [hoveredNode, setHoveredNode] = useState<Node | null>(null);
+  
+  const { cache } = usePokemonData();
 
   useEffect(() => {
     async function fetchTeammates() {
@@ -20,7 +43,7 @@ const NetworkGraph = ({ pokemonName, generation, format }: NetworkGraphProps) =>
       
       setLoading(true);
       try {
-        const formatPokemonName = (name) => {
+        const formatPokemonName = (name: string) => {
           return name
             .split('-')
             .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
@@ -29,8 +52,8 @@ const NetworkGraph = ({ pokemonName, generation, format }: NetworkGraphProps) =>
 
         const url = `/api/pokemon/teammates/${formatPokemonName(pokemonName)}`;
         const queryParams = new URLSearchParams({
-          generation: generation || 'gen9',
-          battle_format: format || 'ou'
+          generation,
+          battle_format: format.toLowerCase()
         });
 
         const res = await fetch(`${url}?${queryParams}`);
@@ -43,12 +66,16 @@ const NetworkGraph = ({ pokemonName, generation, format }: NetworkGraphProps) =>
         // Process and take top 5 teammates
         const teammatesData = (data.teammates || [])
           .slice(0, 5)
-          .map(teammate => ({
-            name: formatPokemonName(teammate.name || teammate.teammate),
-            usage: parseFloat(teammate.usage) || 0
-          }))
-          .filter(teammate => teammate.usage > 0)
-          .sort((a, b) => b.usage - a.usage);
+          .map((teammate: any) => {
+            const name = teammate.name || teammate.teammate;
+            return {
+              name: formatPokemonName(name),
+              usage: parseFloat(teammate.usage) || 0,
+              sprite: cache[name.toLowerCase()]?.sprite
+            };
+          })
+          .filter((teammate:Teammate) => teammate.usage > 0)
+          .sort((a: Teammate, b: Teammate) => b.usage - a.usage);
 
         setTeammates(teammatesData);
       } catch (error) {
@@ -61,30 +88,40 @@ const NetworkGraph = ({ pokemonName, generation, format }: NetworkGraphProps) =>
     }
 
     fetchTeammates();
-  }, [pokemonName, generation, format]);
+  }, [pokemonName, generation, format, cache]);
 
-  const formatPokemonName = (name) => {
+  const formatPokemonName = (name: string) => {
     return name.split('-').map(word => 
       word.charAt(0).toUpperCase() + word.slice(1)
     ).join(' ');
   };
 
-  // Calculate positions for network graph
-  const calculateNodePositions = () => {
+  const calculateNodePositions = (): Node[] => {
     const centerX = 0;
     const centerY = 0;
     const radius = 120;
-    const nodePositions = [];
+    const nodePositions: Node[] = [];
 
     // Center node (selected Pokemon)
-    nodePositions.push({ x: centerX, y: centerY, pokemon: pokemonName });
+    nodePositions.push({
+      x: centerX,
+      y: centerY,
+      pokemon: pokemonName,
+      sprite: cache[pokemonName.toLowerCase()]?.sprite
+    });
 
     // Teammate nodes in a circle around the center
     teammates.forEach((teammate, index) => {
       const angle = (index / teammates.length) * 2 * Math.PI;
       const x = centerX + radius * Math.cos(angle);
       const y = centerY + radius * Math.sin(angle);
-      nodePositions.push({ x, y, pokemon: teammate.name, usage: teammate.usage });
+      nodePositions.push({
+        x,
+        y,
+        pokemon: teammate.name,
+        usage: teammate.usage,
+        sprite: teammate.sprite
+      });
     });
 
     return nodePositions;
@@ -136,12 +173,21 @@ const NetworkGraph = ({ pokemonName, generation, format }: NetworkGraphProps) =>
                   stroke="#fff"
                   strokeWidth={2}
                 />
+                {nodes[0].sprite && (
+                  <image
+                    href={nodes[0].sprite}
+                    x={-25}
+                    y={-25}
+                    width={50}
+                    height={50}
+                    className="pixelated"
+                  />
+                )}
                 <text
                   x={0}
-                  y={0}
+                  y={45}
                   textAnchor="middle"
-                  dominantBaseline="middle"
-                  fill="#fff"
+                  fill="white"
                   fontSize={12}
                   className="pointer-events-none"
                 >
@@ -155,6 +201,8 @@ const NetworkGraph = ({ pokemonName, generation, format }: NetworkGraphProps) =>
                   key={`node-${index}`}
                   onMouseEnter={() => setHoveredNode(node)}
                   onMouseLeave={() => setHoveredNode(null)}
+                  onClick={() => onPokemonSelect(node.pokemon)}
+                  className="cursor-pointer"
                 >
                   <circle
                     cx={node.x}
@@ -164,14 +212,23 @@ const NetworkGraph = ({ pokemonName, generation, format }: NetworkGraphProps) =>
                     opacity={hoveredNode === node ? 0.9 : 0.7}
                     stroke="#fff"
                     strokeWidth={2}
-                    className="cursor-pointer transition-opacity duration-200"
+                    className="transition-opacity duration-200"
                   />
+                  {node.sprite && (
+                    <image
+                      href={node.sprite}
+                      x={node.x - 25}
+                      y={node.y - 25}
+                      width={50}
+                      height={50}
+                      className="pixelated"
+                    />
+                  )}
                   <text
                     x={node.x}
-                    y={node.y}
+                    y={node.y + 45}
                     textAnchor="middle"
-                    dominantBaseline="middle"
-                    fill="#fff"
+                    fill="white"
                     fontSize={11}
                     className="pointer-events-none"
                   >
@@ -204,6 +261,4 @@ const NetworkGraph = ({ pokemonName, generation, format }: NetworkGraphProps) =>
       </CardContent>
     </Card>
   );
-};
-
-export default NetworkGraph;
+}

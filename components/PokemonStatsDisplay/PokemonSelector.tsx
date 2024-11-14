@@ -1,51 +1,96 @@
-// components/PokemonSelector.tsx
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useState, useCallback, useEffect } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Loader2 } from "lucide-react";
+import Image from 'next/image';
+import { cn } from "@/lib/utils";
+import { typeColors } from '@/constants/gendata';
+import { usePokemonData } from '@/hooks/usePokemonData';
+import type { BattleFormat, Generation } from '@/types/format';
 
-const BATTLE_FORMATS = ['ou', 'uu', 'ru', 'nu', 'pu'];
-const GENERATIONS = ['gen1', 'gen2', 'gen3', 'gen4', 'gen5', 'gen6', 'gen7', 'gen8', 'gen9'];
-
-interface PokemonSelectorProps {
-  selectedPokemon: string;
-  selectedGen: string;
-  selectedFormat: string;
-  onPokemonSelect: (pokemon: string) => void;
-  onGenSelect: (gen: string) => void;
-  onFormatSelect: (format: string) => void;
+interface PokemonModalSelectorProps {
+  open: boolean;
+  onClose: () => void;
+  onSelect: (value: string) => void;
+  generation: Generation;
+  format: BattleFormat;
 }
 
-export default function PokemonSelector({
-  selectedPokemon,
-  selectedGen,
-  selectedFormat,
-  onPokemonSelect,
-  onGenSelect,
-  onFormatSelect
-}: PokemonSelectorProps) {
-  const [allPokemon, setAllPokemon] = useState<string[]>([]);
-  
+export function PokemonModalSelector({
+  open,
+  onClose,
+  onSelect,
+  generation,
+  format
+}: PokemonModalSelectorProps) {
+  const [search, setSearch] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [pokemonList, setPokemonList] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Use the Pokemon data hook
+  const { cache, fetchPokemonBatch } = usePokemonData();
+
+  // Fetch Pokemon list when modal opens
   useEffect(() => {
     async function fetchPokemonList() {
-      if (!selectedGen || !selectedFormat) {
-        setAllPokemon([]);
-        return;
-      }
+      if (!open) return;
+
+      console.log('Fetching Pokemon list...', { generation, format });
+      setIsLoading(true);
+      setError(null);
       
       try {
-        const res = await fetch(`/api/pokemon?battle_format=${selectedFormat}&generation=${selectedGen}`);
-        const data = await res.json();
-        if (Array.isArray(data)) {
-          setAllPokemon(data);
+        const params = new URLSearchParams({
+          battle_format: format.toLowerCase(),
+          generation: generation,
+        });
+
+        console.log('Fetching from:', `/api/pokemon/usage?${params}`);
+        const response = await fetch(`/api/pokemon/usage?${params}`);
+        const result = await response.json();
+        
+        console.log('API Response:', result);
+
+        if (!response.ok) {
+          throw new Error(result.error || 'Failed to fetch Pokemon list');
         }
-      } catch (error) {
-        console.error('Failed to fetch Pokemon list:', error);
-        setAllPokemon([]);
+
+        if (!result.data || !Array.isArray(result.data)) {
+          throw new Error('Invalid data format received');
+        }
+
+        // Extract unique Pokemon names from usage data
+        const uniquePokemon = Array.from(new Set(
+          result.data.map((entry: any) => entry.name)
+        )).sort();
+
+        console.log('Unique Pokemon found:', uniquePokemon.length);
+        setPokemonList(uniquePokemon as string[]);
+
+        // Fetch Pokemon details for the list
+        await fetchPokemonBatch(uniquePokemon as string[], (current, total) => {
+          console.log(`Fetching Pokemon data: ${current}/${total}`);
+        });
+
+      } catch (err) {
+        console.error('Error fetching Pokemon list:', err);
+        setError(err instanceof Error ? err.message : 'Failed to fetch Pokemon list');
+        setPokemonList([]);
+      } finally {
+        setIsLoading(false);
       }
     }
+
     fetchPokemonList();
-  }, [selectedGen, selectedFormat]);
+  }, [open, generation, format, fetchPokemonBatch]);
+
+  const filteredPokemon = pokemonList.filter(pokemon =>
+    pokemon.toLowerCase().includes(search.toLowerCase())
+  );
 
   const formatPokemonName = (name: string) => {
     return name.split('-').map(word => 
@@ -54,58 +99,90 @@ export default function PokemonSelector({
   };
 
   return (
-    <Card className="mb-6">
-      <CardHeader>
-        <CardTitle>Select Pokemon</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Select value={selectedGen} onValueChange={onGenSelect}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select Generation" />
-            </SelectTrigger>
-            <SelectContent>
-              {GENERATIONS.map(gen => (
-                <SelectItem key={gen} value={gen}>
-                  {gen.replace('gen', 'Gen ')}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[600px]">
+        <DialogHeader>
+          <DialogTitle>Select Pokemon</DialogTitle>
+        </DialogHeader>
+        
+        <div className="space-y-4">
+          <Input
+            placeholder="Search Pokemon..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="mb-4"
+          />
 
-          <Select value={selectedFormat} onValueChange={onFormatSelect}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select Format" />
-            </SelectTrigger>
-            <SelectContent>
-              {BATTLE_FORMATS.map(format => (
-                <SelectItem key={format} value={format}>
-                  {format.toUpperCase()}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select 
-            value={selectedPokemon} 
-            onValueChange={onPokemonSelect}
-            disabled={!selectedGen || !selectedFormat}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select Pokemon" />
-            </SelectTrigger>
-            <SelectContent>
-              <ScrollArea className="h-60">
-                {allPokemon.map(pokemon => (
-                  <SelectItem key={pokemon} value={pokemon}>
-                    {formatPokemonName(pokemon)}
-                  </SelectItem>
-                ))}
-              </ScrollArea>
-            </SelectContent>
-          </Select>
+          {error ? (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          ) : isLoading ? (
+            <div className="h-[400px] flex flex-col items-center justify-center gap-4">
+              <Loader2 className="h-8 w-8 animate-spin" />
+              <p className="text-sm text-muted-foreground">Loading Pokemon data...</p>
+            </div>
+          ) : filteredPokemon.length === 0 ? (
+            <div className="h-[400px] flex items-center justify-center">
+              <p className="text-muted-foreground">No Pokemon found</p>
+            </div>
+          ) : (
+            <ScrollArea className="h-[400px]">
+              <div className="grid grid-cols-2 gap-2 pr-4">
+                {filteredPokemon.map((pokemon) => {
+                  const pokemonData = cache[pokemon];
+                  return (
+                    <button
+                      key={pokemon}
+                      onClick={() => {
+                        onSelect(pokemon);
+                        onClose();
+                      }}
+                      className={cn(
+                        "flex items-center gap-2 p-2 rounded-lg border",
+                        "hover:bg-accent hover:text-accent-foreground",
+                        "transition-colors duration-200",
+                        "text-left w-full"
+                      )}
+                    >
+                      {pokemonData?.sprite && (
+                        <div className="relative w-10 h-10 flex-shrink-0">
+                          <Image
+                            src={pokemonData.sprite}
+                            alt={pokemon}
+                            fill
+                            className=""
+                          />
+                        </div>
+                      )}
+                      <div className="flex flex-col min-w-0">
+                        <span className="font-medium truncate">
+                          {formatPokemonName(pokemon)}
+                        </span>
+                        <div className="flex gap-1 flex-wrap">
+                          {pokemonData?.types?.map(type => (
+                            <Badge
+                              key={type}
+                              variant="secondary"
+                              className={cn(
+                                "text-xs",
+                                typeColors[type.toLowerCase()]?.bg,
+                                typeColors[type.toLowerCase()]?.text
+                              )}
+                            >
+                              {type}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </ScrollArea>
+          )}
         </div>
-      </CardContent>
-    </Card>
+      </DialogContent>
+    </Dialog>
   );
 }

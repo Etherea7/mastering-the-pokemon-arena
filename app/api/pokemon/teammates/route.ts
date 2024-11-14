@@ -10,7 +10,7 @@ export async function GET(request: Request) {
       const [data, total] = await Promise.all([
         prisma.pokemonTeammates.findMany({
           where: buildWhereClause(filters),
-          orderBy: { usage: 'desc' },
+          orderBy: { Usage: 'desc' },
           ...pagination,
         }),
         prisma.pokemonTeammates.count({
