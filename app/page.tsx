@@ -55,7 +55,7 @@ export default function Page() {
             to help you become a better trainer.
           </p>
           <Button 
-            className="bg-blue-500 hover:bg-blue-600"
+            className=""
             size="lg"
             onClick={() => router.push('/PokemonStats')}
           >
@@ -73,11 +73,11 @@ export default function Page() {
                 onClick={() => router.push(feature.path)}
               >
                 <CardHeader>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 hover::motion-preset-pop">
                     <img 
                       src="/pokeball.png" 
                       alt="pokeball" 
-                      className="w-6 h-6" 
+                      className="w-6 h-6 motion-preset-spin" 
                     />
                     <CardTitle className="text-white">{feature.title}</CardTitle>
                   </div>

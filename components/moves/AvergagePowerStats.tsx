@@ -10,9 +10,9 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  ResponsiveContainer
+  ResponsiveContainer,
+  Cell
 } from 'recharts';
-import { TypeMovesVisualization } from "./TypeMovesVisualization";
 
 interface Move {
   id: number;
@@ -159,35 +159,64 @@ export function AveragePowerStats({ moves }: AveragePowerStatsProps) {
         </CardHeader>
         <CardContent>
           <div className="h-[400px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={typeStats}
-                margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                barSize={20}
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={typeStats}
+              margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+              barSize={20}
+            >
+              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+              <XAxis 
+                dataKey="type" 
+                interval={0}
+                angle={-45}
+                textAnchor="end"
+                height={80}
+                tick={({ x, y, payload }) => (
+                  <g transform={`translate(${x},${y})`}>
+                    <text
+                      x={0}
+                      y={0}
+                      dy={16}
+                      textAnchor="end"
+                      fill={typeColors[payload.value.toLowerCase()]?.color || 'currentColor'}
+                      transform="rotate(-45)"
+                    >
+                      {payload.value}
+                    </text>
+                  </g>
+                )}
+              />
+              <YAxis tick={{ fill: 'currentColor' }} />
+              <Tooltip content={<CustomTooltip />} />
+              <Bar
+                dataKey="physicalPower"
+                name="Physical"
+                className="opacity-90 hover:opacity-100"
               >
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis 
-                  dataKey="type" 
-                  interval={0}
-                  angle={-45}
-                  textAnchor="end"
-                  height={80}
-                  tick={{ fill: 'currentColor' }}
-                />
-                <YAxis tick={{ fill: 'currentColor' }} />
-                <Tooltip content={<CustomTooltip />} />
-                <Bar 
-                  dataKey="physicalPower" 
-                  name="Physical" 
-                  fill="hsl(var(--primary))"
-                />
-                <Bar 
-                  dataKey="specialPower" 
-                  name="Special" 
-                  fill="hsl(var(--accent))"
-                />
-              </BarChart>
-            </ResponsiveContainer>
+                {typeStats.map((entry, index) => (
+                  <Cell
+                    key={`physical-cell-${index}`}
+                    fill={typeColors[entry.type.toLowerCase()]?.color || 'hsl(var(--primary))'}
+                    fillOpacity={0.9}
+                  />
+                ))}
+              </Bar>
+              <Bar
+                dataKey="specialPower"
+                name="Special"
+                className="opacity-70 hover:opacity-80"
+              >
+                {typeStats.map((entry, index) => (
+                  <Cell
+                    key={`special-cell-${index}`}
+                    fill={typeColors[entry.type.toLowerCase()]?.color || 'hsl(var(--accent))'}
+                    fillOpacity={0.7}
+                  />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
           </div>
         </CardContent>
       </Card>

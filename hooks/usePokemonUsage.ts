@@ -1,17 +1,36 @@
-// hooks/usePokemonUsage.ts
 import { useState, useEffect } from 'react'
 
+interface PokemonUsageData {
+  name: string;
+  generation: string;
+  year_month: string;
+  usage_percent: number;
+  rank?: number;
+  raw_count?: number;
+}
+
+interface MonthlyData {
+  month: string;
+  [pokemonName: string]: string | number | null;
+}
+
+interface PokemonAverageData {
+  totalUsage: number;
+  months: number;
+  monthlyData: Record<string, number>;
+}
+
 interface UsePokemonUsageProps {
-  selectedTier: string
-  selectedGeneration: string
-  startMonth: string
-  startYear: string
-  endMonth: string
-  endYear: string
-  activePreset: number
-  customSelectedPokemon: string[]
-  selectionMode: 'preset' | 'custom'
-  rating?: number  // Added rating parameter
+  selectedTier: string;
+  selectedGeneration: string;
+  startMonth: string;
+  startYear: string;
+  endMonth: string;
+  endYear: string;
+  activePreset: number;
+  customSelectedPokemon: string[];
+  selectionMode: 'preset' | 'custom';
+  rating?: number;
 }
 
 export function usePokemonUsage({
@@ -24,10 +43,10 @@ export function usePokemonUsage({
   activePreset,
   customSelectedPokemon,
   selectionMode,
-  rating           // Added rating parameter
+  rating
 }: UsePokemonUsageProps) {
   const [selectedPokemon, setSelectedPokemon] = useState<string[]>([])
-  const [chartData, setChartData] = useState<any[]>([])
+  const [chartData, setChartData] = useState<MonthlyData[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -35,7 +54,6 @@ export function usePokemonUsage({
       try {
         setLoading(true)
         
-        // If in custom mode and no Pokemon selected, reset data and return
         if (selectionMode === 'custom' && customSelectedPokemon.length === 0) {
           setSelectedPokemon([])
           setChartData([])
@@ -55,19 +73,18 @@ export function usePokemonUsage({
         const result = await response.json()
         
         if (result.data) {
-          // Get all unique months
-          const allMonths = [...new Set(result.data.map((item: any) => item.year_month))].sort()
+          const allMonths = Array.from(new Set(
+            (result.data as PokemonUsageData[]).map(item => item.year_month)
+          )).sort()
           
-          // Filter data by generation
-          const generationData = result.data.filter((item: any) => 
+          const generationData = (result.data as PokemonUsageData[]).filter(item => 
             item.generation === selectedGeneration
           )
 
           let pokemonToDisplay: string[] = []
 
           if (selectionMode === 'preset') {
-            // Calculate averages and get top Pokemon
-            const pokemonAverages = generationData.reduce((acc, curr) => {
+            const pokemonAverages = generationData.reduce((acc: Record<string, PokemonAverageData>, curr) => {
               if (!acc[curr.name]) {
                 acc[curr.name] = {
                   totalUsage: curr.usage_percent,
@@ -82,18 +99,15 @@ export function usePokemonUsage({
                 }
               }
               return acc
-            }, {} as Record<string, any>)
+            }, {})
 
             const pokemonRankings = Object.entries(pokemonAverages)
-                .map(([name, data]) => {
-                    const typedData = data as { totalUsage: number; months: number }; // Type assertion
-                    return {
-                    name,
-                    averageUsage: typedData.totalUsage / typedData.months,
-                    monthsPresent: typedData.months,
-                    totalMonths: allMonths.length
-                    }
-                })
+              .map(([name, data]) => ({
+                name,
+                averageUsage: data.totalUsage / data.months,
+                monthsPresent: data.months,
+                totalMonths: allMonths.length
+              }))
               .filter(p => p.monthsPresent >= allMonths.length * 0.5)
               .sort((a, b) => b.averageUsage - a.averageUsage)
 
@@ -104,13 +118,11 @@ export function usePokemonUsage({
             pokemonToDisplay = [...customSelectedPokemon]
           }
 
-          // Ensure we always set an array, even if empty
           setSelectedPokemon(pokemonToDisplay)
           
-          // Only transform data if we have Pokemon to display
           if (pokemonToDisplay.length > 0) {
-            const transformedData = allMonths.map(month => {
-              const monthData = { month }
+            const transformedData: MonthlyData[] = allMonths.map(month => {
+              const monthData: MonthlyData = { month }
               pokemonToDisplay.forEach(pokemon => {
                 const record = generationData.find(item => 
                   item.name === pokemon && item.year_month === month
@@ -134,7 +146,7 @@ export function usePokemonUsage({
     }
     fetchUsageData()
   }, [selectedTier, selectedGeneration, startMonth, startYear, endMonth, endYear, 
-      activePreset, customSelectedPokemon, selectionMode, rating]) // Added rating to dependencies
+      activePreset, customSelectedPokemon, selectionMode, rating])
 
   return { selectedPokemon, chartData, loading }
 }

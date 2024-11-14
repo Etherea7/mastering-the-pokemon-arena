@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { typeColors } from '@/constants/gendata';
 import Image from 'next/image';
+import { formatPokemonNameForApi } from '@/lib/pokeapiNames';
 import { 
   RadarChart, 
   PolarGrid, 
@@ -86,8 +87,10 @@ export default function Page() {
     setLoading(true);
     try {
       // Fetch basic Pokemon data
-      const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${pokemonName.toLowerCase()}`);
+      const formattedName = formatPokemonNameForApi(pokemonName);
+      const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${formattedName}`);
       const data = await response.json();
+      
 
       // Fetch species data for description and evolution chain
       const speciesResponse = await fetch(data.species.url);
@@ -284,7 +287,7 @@ export default function Page() {
                     src={pokemonData.sprite}
                     alt={pokemonData.name}
                     fill
-                    className="object-contain pixelated"
+                    className="object-contain"
                   />
                 </div>
               )}

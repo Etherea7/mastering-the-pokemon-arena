@@ -46,7 +46,7 @@ export function CounterMatrix({
           generation: generation || 'gen9',
           battle_format: format?.toLowerCase() || 'ou',
         });
-
+        console.log(pokemonName,"hi")
         const response = await fetch(`/api/pokemon/counters/${pokemonName}?${queryParams}`);
         const data = await response.json();
         

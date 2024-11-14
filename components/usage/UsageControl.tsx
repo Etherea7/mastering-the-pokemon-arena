@@ -1,6 +1,8 @@
 // components/pokemon-usage/UsageControls.tsx
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { BATTLE_FORMATS } from "@/types/format"
+
 
 interface UsageControlsProps {
   selectedTier: string
@@ -36,7 +38,7 @@ const months = [
   { value: '11', label: 'November' },
   { value: '12', label: 'December' }
 ]
-const tiers = ['OU', 'UU', 'RU', 'NU', 'PU']
+const tiers = BATTLE_FORMATS
 const generations = Array.from({ length: 9 }, (_, i) => ({
   value: `gen${i + 1}`,
   label: `Generation ${i + 1}`
@@ -90,7 +92,10 @@ export function UsageControls({
                 <SelectValue placeholder="Select Tier" />
               </SelectTrigger>
               <SelectContent>
-                {tiers.map(tier => (
+                {tiers.SMOGON.map(tier => (
+                  <SelectItem key={tier} value={tier}>{tier}</SelectItem>
+                ))}
+                {tiers.VGC.map(tier => (
                   <SelectItem key={tier} value={tier}>{tier}</SelectItem>
                 ))}
               </SelectContent>

@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from '../ui/scroll-area';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
@@ -39,11 +40,13 @@ interface Move {
     pp: number;
     damage_class: string;
     effect_entries: string[];
-    learned_by_pokemon: Array<{
-      name: string;
-      url: string;
-    }>;
+    url: string;
   }
+
+  interface LearnsetCache {
+    [key: string]: Array<{ name: string; url: string }>;
+  }
+  
   
   interface MovesComparisonTableProps {
     moves: Record<string, Move>;
@@ -68,6 +71,7 @@ export function MovesComparisonTable({ moves }: MovesComparisonTableProps) {
   const { cache: pokemonCache, fetchPokemonBatch } = usePokemonData();
   const [loadingPokemon, setLoadingPokemon] = useState(false);
   const [learnsetPokemon, setLearnsetPokemon] = useState<string[]>([]);
+  const [learnsetCache, setLearnsetCache] = useState<LearnsetCache>({});
 
   const uniqueTypes = useMemo(() => 
     Array.from(new Set(Object.values(moves).map(move => move.type))).sort(),
@@ -106,21 +110,49 @@ export function MovesComparisonTable({ moves }: MovesComparisonTableProps) {
     setLoadingPokemon(true);
     try {
       const move = moves[moveName];
-      if (!move?.learned_by_pokemon) {
+      if (!move) {
         setLearnsetPokemon([]);
         return;
       }
+  
+      // Check if we have cached learnset data
+      if (learnsetCache[moveName]) {
+        const pokemonList = learnsetCache[moveName].map(p => p.name);
+        setLearnsetPokemon(pokemonList);
+        
+        // Fetch sprites in background if needed
+        const uncachedPokemon = pokemonList.filter(name => !pokemonCache[name]);
+        if (uncachedPokemon.length > 0) {
+          await fetchPokemonBatch(uncachedPokemon);
+        }
+        return;
+      }
+  
+      // Fetch learnset data
+      const moveResponse = await fetch(move.url);
+      const moveData = await moveResponse.json();
       
-      // Extract Pokemon names from the learned_by_pokemon array
-      const pokemonList = move.learned_by_pokemon.map(p => p.name);
-      
+      if (!moveData.learned_by_pokemon) {
+        setLearnsetPokemon([]);
+        return;
+      }
+  
+      // Cache the learnset data
+      setLearnsetCache(prev => ({
+        ...prev,
+        [moveName]: moveData.learned_by_pokemon
+      }));
+  
+      // Set the Pokemon list and fetch sprites
+      const pokemonList = moveData.learned_by_pokemon.map((p: any) => p.name);
+      setLearnsetPokemon(pokemonList);
+  
       // Fetch sprite data for uncached Pokemon
-      const uncachedPokemon = pokemonList.filter(name => !pokemonCache[name]);
+      const uncachedPokemon = pokemonList.filter((name:any) => !pokemonCache[name]);
       if (uncachedPokemon.length > 0) {
         await fetchPokemonBatch(uncachedPokemon);
       }
-      
-      setLearnsetPokemon(pokemonList);
+  
     } catch (error) {
       console.error('Failed to process learnset:', error);
       setLearnsetPokemon([]);
@@ -303,85 +335,88 @@ export function MovesComparisonTable({ moves }: MovesComparisonTableProps) {
         </CardContent>
       </Card>
 
-      {/* Learnset Modal */}
       <Dialog 
         open={!!selectedMove} 
         onOpenChange={(isOpen) => {
-          if (!isOpen) {
+            if (!isOpen) {
             setTimeout(() => {
                 setSelectedMove(null);
                 setLearnsetPokemon([]);
-              }, 100);
-          }
+            }, 100);
+            }
         }}
-      >
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              Pokémon that can learn {formatMoveName(selectedMove || '')}
-              {moves[selectedMove || ''] && (
-                <Badge
-                  variant="secondary"
-                  className={cn(
-                    typeColors[moves[selectedMove || ''].type.toLowerCase()]?.bg,
-                    typeColors[moves[selectedMove || ''].type.toLowerCase()]?.text
-                  )}
-                >
-                  {moves[selectedMove || ''].type}
-                </Badge>
-              )}
-            </DialogTitle>
-          </DialogHeader>
+        >
+  <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
+    <DialogHeader>
+      <DialogTitle className="flex items-center gap-2">
+        Pokémon that can learn {formatMoveName(selectedMove || '')}
+        {moves[selectedMove || ''] && (
+          <Badge
+            variant="secondary"
+            className={cn(
+              typeColors[moves[selectedMove || ''].type.toLowerCase()]?.bg,
+              typeColors[moves[selectedMove || ''].type.toLowerCase()]?.text
+            )}
+          >
+            {moves[selectedMove || ''].type}
+          </Badge>
+        )}
+      </DialogTitle>
+    </DialogHeader>
 
-          {loadingPokemon ? (
-            <div className="flex items-center justify-center h-48">
-              <Loader2 className="w-8 h-8 animate-spin" />
-            </div>
-          ) : learnsetPokemon.length === 0 ? (
-            <div className="text-center text-muted-foreground py-8">
-              No Pokémon found that can learn this move
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 p-4">
-              {learnsetPokemon.map((pokemon) => (
-                <div 
-                  key={pokemon}
-                  className="flex flex-col items-center p-2 border rounded-lg hover:bg-muted/50"
-                >
-                  {pokemonCache[pokemon]?.sprite && (
-                    <div className="relative w-16 h-16">
-                      <Image
-                        src={pokemonCache[pokemon].sprite}
-                        alt={pokemon}
-                        fill
-                        className="object-contain pixelated"
-                      />
-                    </div>
-                  )}
-                  <span className="text-sm font-medium mt-2">
-                    {formatMoveName(pokemon)}
-                  </span>
-                  <div className="flex gap-1 mt-1">
-                    {pokemonCache[pokemon]?.types?.map(type => (
-                      <Badge
-                        key={type}
-                        variant="secondary"
-                        className={cn(
-                          "text-xs",
-                          typeColors[type.toLowerCase()]?.bg,
-                          typeColors[type.toLowerCase()]?.text
-                        )}
-                      >
-                        {type}
-                      </Badge>
-                    ))}
+    {loadingPokemon ? (
+      <div className="flex items-center justify-center h-48">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    ) : learnsetPokemon.length === 0 ? (
+      <div className="text-center text-muted-foreground py-8">
+        No Pokémon found that can learn this move
+      </div>
+    ) : (
+      <div className="relative flex-1 -mx-6">
+        <ScrollArea className="h-[60vh] px-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            {learnsetPokemon.map((pokemon) => (
+              <div 
+                key={pokemon}
+                className="flex flex-col items-center p-2 border rounded-lg hover:bg-muted/50"
+              >
+                {pokemonCache[pokemon]?.sprite && (
+                  <div className="relative w-16 h-16">
+                    <Image
+                      src={pokemonCache[pokemon].sprite}
+                      alt={pokemon}
+                      fill
+                      className="object-contain pixelated"
+                    />
                   </div>
+                )}
+                <span className="text-sm font-medium mt-2">
+                  {formatMoveName(pokemon)}
+                </span>
+                <div className="flex gap-1 mt-1 flex-wrap justify-center">
+                  {pokemonCache[pokemon]?.types?.map(type => (
+                    <Badge
+                      key={type}
+                      variant="secondary"
+                      className={cn(
+                        "text-xs",
+                        typeColors[type.toLowerCase()]?.bg,
+                        typeColors[type.toLowerCase()]?.text
+                      )}
+                    >
+                      {type}
+                    </Badge>
+                  ))}
                 </div>
-              ))}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+              </div>
+            ))}
+          </div>
+        </ScrollArea>
+      </div>
+    )}
+  </DialogContent>
+</Dialog>
     </>
   );
 }

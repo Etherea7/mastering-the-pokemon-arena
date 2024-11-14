@@ -10,7 +10,6 @@ import {
   File,
   FileText,
   HelpCircle,
-  Image,
   Laptop,
   LayoutDashboardIcon,
   Loader2,
@@ -30,9 +29,19 @@ import {
   UserX2Icon,
   X
 } from 'lucide-react';
-import NextImage from 'next/image'; // Added for Pokeball image
+
+import NextImage from 'next/image';
 
 export type Icon = LucideIcon;
+
+// Define a custom type for icon components that merge LucideProps with HTML attributes
+type IconProps = LucideProps & React.HTMLAttributes<HTMLElement>;
+
+// Define a specific type for image icons
+interface ImageIconProps extends Omit<IconProps, 'width' | 'height'> {
+  width?: number;
+  height?: number;
+}
 
 export const Icons = {
   dashboard: LayoutDashboardIcon,
@@ -48,7 +57,6 @@ export const Icons = {
   employee: UserX2Icon,
   post: FileText,
   page: File,
-  media: Image,
   settings: Settings,
   billing: CreditCard,
   ellipsis: MoreVertical,
@@ -61,25 +69,28 @@ export const Icons = {
   sun: SunMedium,
   moon: Moon,
   laptop: Laptop,
-  pokeball: ({ ...props }: LucideProps) => ( // Added Pokeball icon
+
+  pokeball: ({ width = 16, height = 16,className }: ImageIconProps) => (
     <NextImage
       src="/pokeball.png"
       alt="Pokeball"
-      width={16}
-      height={16}
-      {...props}
+      width={width}
+      height={height}
+      className={className}
     />
   ),
-  pokemonLogo: ({ ...props }: LucideProps) => ( 
+  
+  pokemonLogo: ({ width = 16, height = 16, className }: ImageIconProps) => (
     <NextImage
       src="/pokemonLogo.png"
       alt="pokemonLogo"
-      width={16}
-      height={16}
-      {...props}
+      width={width}
+      height={height}
+      className={className}
     />
   ),
-  gitHub: ({ ...props }: LucideProps) => (
+
+  gitHub: ({ ...props }: IconProps) => (
     <svg
       aria-hidden="true"
       focusable="false"

@@ -114,11 +114,25 @@ export function TypeMovesVisualization({ moves }: TypeMovesVisualizationProps) {
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
               <XAxis 
                 dataKey="type"
-                tick={{ fill: 'currentColor' }}
+                // tick={{ fill: 'currentColor' }}  ~
                 interval={0}
                 angle={-45}
                 textAnchor="end"
                 height={80}
+                tick={({ x, y, payload }) => (
+                  <g transform={`translate(${x},${y})`}>
+                    <text
+                      x={0}
+                      y={0}
+                      dy={16}
+                      textAnchor="end"
+                      fill={typeColors[payload.value.toLowerCase()]?.color || 'currentColor'}
+                      transform="rotate(-45)"
+                    >
+                      {payload.value}
+                    </text>
+                  </g>
+                )}
               />
               <YAxis tick={{ fill: 'currentColor' }} />
               <Tooltip content={<CustomTooltip />} />

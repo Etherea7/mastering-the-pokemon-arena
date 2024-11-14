@@ -9,10 +9,7 @@ interface Move {
   pp: number;
   damage_class: string;
   effect_entries: string[];
-  learned_by_pokemon: Array<{
-    name: string;
-    url: string;
-  }>;
+  url: string; // Add this to store the move's URL
 }
 
 interface MoveCache {
@@ -22,7 +19,7 @@ interface MoveCache {
 
 const CACHE_KEY = 'pokemon-moves-cache';
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
-const MOVES_PER_BATCH = 20; // Reduced batch size since we're fetching more data
+const MOVES_PER_BATCH = 20;
 
 export function useMoveData() {
   const [moves, setMoves] = useState<Record<string, Move>>({});
@@ -76,7 +73,7 @@ export function useMoveData() {
               effect_entries: moveData.effect_entries
                 .filter((entry: any) => entry.language.name === 'en')
                 .map((entry: any) => entry.effect),
-              learned_by_pokemon: moveData.learned_by_pokemon || []
+              url: move.url // Store the URL for later use
             };
           });
 
@@ -107,5 +104,3 @@ export function useMoveData() {
 
   return { moves, loading, error, progress };
 }
-
-// Helper functions remain the same...
