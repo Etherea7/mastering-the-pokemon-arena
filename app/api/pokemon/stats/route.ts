@@ -27,11 +27,11 @@ export async function GET(request: Request) {
         }),
         prisma.pokemonAbilities.findFirst({
           where,
-          orderBy: { usage: 'desc' },
+          orderBy: { Usage: 'desc' },
         }),
         prisma.pokemonItems.findFirst({
           where,
-          orderBy: { usage: 'desc' },
+          orderBy: { Usage: 'desc' },
         }),
       ]);
   
