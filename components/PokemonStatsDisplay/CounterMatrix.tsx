@@ -4,7 +4,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { typeColors } from '@/constants/gendata';
-import { usePokemonData } from '@/hooks/usePokemonData';
 import Image from 'next/image';
 
 interface Counter {
@@ -12,6 +11,11 @@ interface Counter {
   lose_rate_against_opp: number;
   ko_percent: number;
   switch_percent: number;
+}
+
+interface PokemonData {
+  sprite: string;
+  types: string[];
 }
 
 interface CounterMatrixProps {
@@ -28,9 +32,9 @@ export function CounterMatrix({
   onPokemonSelect
 }: CounterMatrixProps) {
   const [countersData, setCountersData] = useState<Counter[]>([]);
+  const [pokemonSprites, setPokemonSprites] = useState<Record<string, PokemonData>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { cache } = usePokemonData();
 
   useEffect(() => {
     async function fetchCounterData() {
@@ -51,6 +55,35 @@ export function CounterMatrix({
         }
         
         setCountersData(data.data || []);
+
+        // Fetch sprite data for all counters
+        const spritePromises = data.data.map(async (counter: Counter) => {
+          try {
+            const formattedName = counter.opp_pokemon.toLowerCase();
+            const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${formattedName}`);
+            const pokemonData = await response.json();
+            return {
+              name: counter.opp_pokemon,
+              data: {
+                sprite: pokemonData.sprites.front_default,
+                types: pokemonData.types.map((t: any) => t.type.name)
+              }
+            };
+          } catch (error) {
+            console.error(`Failed to fetch sprite for ${counter.opp_pokemon}:`, error);
+            return null;
+          }
+        });
+
+        const spriteResults = await Promise.all(spritePromises);
+        const newSprites: Record<string, PokemonData> = {};
+        spriteResults.forEach(result => {
+          if (result) {
+            newSprites[result.name] = result.data;
+          }
+        });
+        setPokemonSprites(newSprites);
+
       } catch (err) {
         console.error('Error fetching counter data:', err);
         setError(err instanceof Error ? err.message : 'Failed to fetch counter data');
@@ -88,28 +121,29 @@ export function CounterMatrix({
       )}
     >
       <div className="flex items-center gap-2">
-        {cache[counter.opp_pokemon.toLowerCase()]?.sprite && (
-          <div className="relative w-10 h-10">
+        {pokemonSprites[counter.opp_pokemon]?.sprite && (
+          <div className="relative w-10 h-10 flex-shrink-0">
             <Image
-              src={cache[counter.opp_pokemon.toLowerCase()].sprite}
+              src={pokemonSprites[counter.opp_pokemon].sprite}
               alt={counter.opp_pokemon}
               width={40}
               height={40}
-              className="pixelated"
             />
           </div>
         )}
         <div>
-          <span className="font-medium text-foreground">
-            {formatPokemonName(counter.opp_pokemon)}
-          </span>
+          <div className="flex items-center gap-1 mb-0.5">
+            <span className="text-sm font-medium text-foreground">
+              {formatPokemonName(counter.opp_pokemon)}
+            </span>
+          </div>
           <div className="flex gap-1">
-            {cache[counter.opp_pokemon.toLowerCase()]?.types?.map(type => (
+            {pokemonSprites[counter.opp_pokemon]?.types.map(type => (
               <Badge
                 key={type}
                 variant="secondary"
                 className={cn(
-                  "text-xs",
+                  "text-[10px] px-1 py-0",
                   typeColors[type.toLowerCase()]?.bg,
                   typeColors[type.toLowerCase()]?.text
                 )}
@@ -120,12 +154,15 @@ export function CounterMatrix({
           </div>
         </div>
       </div>
-      <div className="text-sm text-right">
-        <div className="text-foreground">
+      <div className="text-xs text-right">
+        <div className="font-medium text-foreground">
           {isStrong ? 'Win' : 'Loss'}: {counter.lose_rate_against_opp.toFixed(1)}%
         </div>
         <div className="text-muted-foreground">
-          KO: {counter.ko_percent.toFixed(1)}% / Switch: {counter.switch_percent.toFixed(1)}%
+          KO: {counter.ko_percent?.toFixed(1)}%
+        </div>
+        <div className="text-muted-foreground">
+          Switch: {counter.switch_percent?.toFixed(1)}%
         </div>
       </div>
     </div>

@@ -34,6 +34,12 @@
     --team-2: var(--accent);  /* Using golden accent */
     --team-1-muted: color-mix(in srgb, var(--primary) 50%, transparent);
     --team-2-muted: color-mix(in srgb, var(--accent) 50%, transparent);
+    --stat-hp: hsl(142, 69%, 58%);
+    --stat-atk: hsl(0, 85%, 65%);
+    --stat-def: hsl(217, 85%, 65%);
+    --stat-spa: hsl(280, 85%, 65%);
+    --stat-spd: hsl(48, 85%, 65%);
+    --stat-spe: hsl(142, 85%, 65%);
   }
 
   .dark {

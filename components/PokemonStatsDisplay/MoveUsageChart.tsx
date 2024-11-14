@@ -286,7 +286,6 @@ export function PokemonMoves({
       {moveUsages.length > 0 && (
         <MovesTreeMap
           moveUsages={moveUsages}
-          moveTypes={moveTypes}
         />
       )}
     </div>

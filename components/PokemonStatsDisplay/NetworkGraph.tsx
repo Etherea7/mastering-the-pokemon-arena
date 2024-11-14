@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { usePokemonData } from '@/hooks/usePokemonData';
 
 interface Teammate {
   name: string;
   usage: number;
   sprite?: string;
+  types?: string[];
 }
 
 interface Node {
@@ -15,6 +15,7 @@ interface Node {
   pokemon: string;
   usage?: number;
   sprite?: string;
+  types?: string[];
 }
 
 interface NetworkGraphProps {
@@ -34,15 +35,37 @@ export function NetworkGraph({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [hoveredNode, setHoveredNode] = useState<Node | null>(null);
-  
-  const { cache } = usePokemonData();
+  const [centerSprite, setCenterSprite] = useState<string | null>(null);
+  const [centerTypes, setCenterTypes] = useState<string[]>([]);
 
   useEffect(() => {
+    async function fetchPokemonData(name: string) {
+      try {
+        const formattedName = name.toLowerCase().replace(/\s+/g, '-');
+        const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${formattedName}`);
+        const data = await response.json();
+        return {
+          sprite: data.sprites.front_default,
+          types: data.types.map((t: any) => t.type.name)
+        };
+      } catch (error) {
+        console.error(`Failed to fetch data for ${name}:`, error);
+        return null;
+      }
+    }
+
     async function fetchTeammates() {
       if (!pokemonName) return;
       
       setLoading(true);
       try {
+        // Fetch center Pokemon data
+        const centerData = await fetchPokemonData(pokemonName);
+        if (centerData) {
+          setCenterSprite(centerData.sprite);
+          setCenterTypes(centerData.types);
+        }
+
         const formatPokemonName = (name: string) => {
           return name
             .split('-')
@@ -63,21 +86,26 @@ export function NetworkGraph({
           throw new Error(data.error || 'Failed to fetch teammates');
         }
 
-        // Process and take top 5 teammates
-        const teammatesData = (data.teammates || [])
+        // Fetch data for all teammates
+        const teammatesPromises = (data.teammates || [])
           .slice(0, 5)
-          .map((teammate: any) => {
+          .map(async (teammate: any) => {
             const name = teammate.name || teammate.teammate;
+            const pokemonData = await fetchPokemonData(name);
             return {
               name: formatPokemonName(name),
               usage: parseFloat(teammate.usage) || 0,
-              sprite: cache[name.toLowerCase()]?.sprite
+              sprite: pokemonData?.sprite,
+              types: pokemonData?.types
             };
-          })
-          .filter((teammate:Teammate) => teammate.usage > 0)
+          });
+
+        const teammatesData = await Promise.all(teammatesPromises);
+        const filteredTeammates = teammatesData
+          .filter((teammate: Teammate) => teammate.usage > 0)
           .sort((a: Teammate, b: Teammate) => b.usage - a.usage);
 
-        setTeammates(teammatesData);
+        setTeammates(filteredTeammates);
       } catch (error) {
         console.error('Failed to fetch teammates:', error);
         setError('Failed to fetch teammate data');
@@ -88,7 +116,7 @@ export function NetworkGraph({
     }
 
     fetchTeammates();
-  }, [pokemonName, generation, format, cache]);
+  }, [pokemonName, generation, format]);
 
   const formatPokemonName = (name: string) => {
     return name.split('-').map(word => 
@@ -107,7 +135,8 @@ export function NetworkGraph({
       x: centerX,
       y: centerY,
       pokemon: pokemonName,
-      sprite: cache[pokemonName.toLowerCase()]?.sprite
+      sprite: centerSprite || undefined,
+      types: centerTypes
     });
 
     // Teammate nodes in a circle around the center
@@ -120,7 +149,8 @@ export function NetworkGraph({
         y,
         pokemon: teammate.name,
         usage: teammate.usage,
-        sprite: teammate.sprite
+        sprite: teammate.sprite,
+        types: teammate.types
       });
     });
 
@@ -128,6 +158,39 @@ export function NetworkGraph({
   };
 
   const nodes = calculateNodePositions();
+
+  const renderNodeLabel = (name: string, x: number, y: number) => (
+    <>
+      {/* Text shadow for visibility in both themes */}
+      <text
+        x={x}
+        y={y}
+        textAnchor="middle"
+        fill="black"
+        fontSize={12}
+        className="pointer-events-none"
+        style={{ 
+          paintOrder: 'stroke',
+          stroke: 'white',
+          strokeWidth: '3px',
+          strokeLinecap: 'round',
+          strokeLinejoin: 'round'
+        }}
+      >
+        {formatPokemonName(name)}
+      </text>
+      <text
+        x={x}
+        y={y}
+        textAnchor="middle"
+        fill="currentColor"
+        fontSize={12}
+        className="pointer-events-none"
+      >
+        {formatPokemonName(name)}
+      </text>
+    </>
+  );
 
   return (
     <Card className="w-full">
@@ -156,21 +219,21 @@ export function NetworkGraph({
                   y1={0}
                   x2={node.x}
                   y2={node.y}
-                  stroke="#ccc"
+                  stroke="currentColor"
                   strokeWidth={2}
-                  strokeOpacity={0.5}
+                  strokeOpacity={0.2}
                 />
               ))}
 
-              {/* Center node (selected Pokemon) */}
+              {/* Center node */}
               <g>
                 <circle
                   cx={0}
                   cy={0}
                   r={40}
-                  fill="#8884d8"
+                  className="fill-primary"
                   opacity={0.8}
-                  stroke="#fff"
+                  stroke="currentColor"
                   strokeWidth={2}
                 />
                 {nodes[0].sprite && (
@@ -183,16 +246,7 @@ export function NetworkGraph({
                     className="pixelated"
                   />
                 )}
-                <text
-                  x={0}
-                  y={45}
-                  textAnchor="middle"
-                  fill="white"
-                  fontSize={12}
-                  className="pointer-events-none"
-                >
-                  {formatPokemonName(pokemonName)}
-                </text>
+                {renderNodeLabel(pokemonName, 0, 45)}
               </g>
 
               {/* Teammate nodes */}
@@ -208,11 +262,10 @@ export function NetworkGraph({
                     cx={node.x}
                     cy={node.y}
                     r={35}
-                    fill="#b9b4e5"
+                    className="fill-muted hover:fill-muted/80"
                     opacity={hoveredNode === node ? 0.9 : 0.7}
-                    stroke="#fff"
+                    stroke="currentColor"
                     strokeWidth={2}
-                    className="transition-opacity duration-200"
                   />
                   {node.sprite && (
                     <image
@@ -221,33 +274,17 @@ export function NetworkGraph({
                       y={node.y - 25}
                       width={50}
                       height={50}
-                      className="pixelated"
+                    
                     />
                   )}
-                  <text
-                    x={node.x}
-                    y={node.y + 45}
-                    textAnchor="middle"
-                    fill="white"
-                    fontSize={11}
-                    className="pointer-events-none"
-                  >
-                    {formatPokemonName(node.pokemon)}
-                  </text>
+                  {renderNodeLabel(node.pokemon, node.x, node.y + 45)}
                 </g>
               ))}
             </svg>
 
             {/* Hover tooltip */}
             {hoveredNode && (
-              <div
-                className="absolute bg-white p-2 rounded-lg shadow-lg border"
-                style={{
-                  left: '50%',
-                  bottom: '10px',
-                  transform: 'translateX(-50%)',
-                }}
-              >
+              <div className="absolute bg-popover p-2 rounded-lg shadow-lg border left-1/2 bottom-4 -translate-x-1/2">
                 <div className="font-medium">
                   {formatPokemonName(hoveredNode.pokemon)}
                 </div>

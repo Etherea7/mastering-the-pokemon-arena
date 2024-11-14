@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Treemap, ResponsiveContainer, Tooltip } from 'recharts';
 import { typeColors } from '@/constants/gendata';
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface MoveUsage {
   move: string;
@@ -10,54 +11,79 @@ interface MoveUsage {
   avgPoints: number;
 }
 
-interface MoveType {
+interface CustomContentProps {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
   name: string;
   type: string;
 }
 
-interface MovesTreeMapProps {
+const MovesTreeMap: React.FC<{
   moveUsages: MoveUsage[];
-  moveTypes: Record<string, string>;
-}
-
-interface ProcessedMoveUsage {
-  move: string;
-  min: number;
-  max: number;
-  avgPoints: number;
-}
-
-interface MovesTreeMapProps {
-  moveUsages: ProcessedMoveUsage[];
-  moveTypes: Record<string, string>;
-}
-
-const MovesTreeMap: React.FC<MovesTreeMapProps> = ({ moveUsages, moveTypes }) => {
-  console.log('moveUsages received:', moveUsages);
+}> = ({ moveUsages }) => {
+  const [moveTypes, setMoveTypes] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(true);
   const validMoveUsages = Array.isArray(moveUsages) ? moveUsages : [];
-  // Transform the data for the treemap
+
+  useEffect(() => {
+    const fetchMoveTypes = async () => {
+      setLoading(true);
+      const types: Record<string, string> = {};
+      
+      try {
+        // Fetch types for all moves in parallel
+        const promises = validMoveUsages.map(async (moveData) => {
+          try {
+            const formattedName = moveData.move.toLowerCase().replace(/\s+/g, '-');
+            const response = await fetch(`https://pokeapi.co/api/v2/move/${formattedName}`);
+            const data = await response.json();
+            return { move: moveData.move, type: data.type.name };
+          } catch (error) {
+            console.error(`Failed to fetch type for move ${moveData.move}:`, error);
+            return { move: moveData.move, type: 'normal' }; // Fallback to normal type
+          }
+        });
+
+        const results = await Promise.all(promises);
+        results.forEach(({ move, type }) => {
+          types[move] = type;
+        });
+
+        setMoveTypes(types);
+      } catch (error) {
+        console.error('Error fetching move types:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (validMoveUsages.length > 0) {
+      fetchMoveTypes();
+    }
+  }, [validMoveUsages]);
+
   const treeMapData = [{
     name: 'moves',
     children: moveUsages.map(moveData => ({
       name: moveData.move,
-      size: moveData.max, // Using max usage for size
+      size: moveData.max,
       type: moveTypes[moveData.move] || 'normal'
     }))
   }];
 
-  console.log('Transformed treeMapData:', treeMapData);
-
-  // Custom tooltip component
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length > 0) {
       const data = payload[0].payload;
-      const moveData = moveUsages.find(m => m.move === data.name);
+      const moveData = validMoveUsages.find(m => m.move === data.name);
       const type = moveTypes[data.name] || 'normal';
+      const typeColor = typeColors[type]?.color || typeColors.normal.color;
       
       return (
-        <div className="bg-white p-2 shadow-lg rounded-lg border">
+        <div className="bg-popover border rounded-lg p-2 shadow-md">
           <p className="font-medium">{data.name}</p>
-          <p className="text-sm" style={{ color: typeColors[type]?.color }}>
+          <p className="text-sm" style={{ color: typeColor }}>
             Type: {type.charAt(0).toUpperCase() + type.slice(1)}
           </p>
           {moveData && (
@@ -76,16 +102,16 @@ const MovesTreeMap: React.FC<MovesTreeMapProps> = ({ moveUsages, moveTypes }) =>
     return null;
   };
 
-  // Custom content renderer for the treemap boxes
-  const CustomContent = ({
+  const CustomContent = React.memo(({
     x = 0,
     y = 0,
     width = 0,
     height = 0,
     name = '',
     type = 'normal'
-  }: any) => {
-    const color = typeColors[type]?.color || typeColors.normal.color;
+  }: CustomContentProps) => {
+    const typeKey = type.toLowerCase() as keyof typeof typeColors;
+    const color = typeColors[typeKey]?.color || typeColors.normal.color;
     
     return (
       <g>
@@ -104,16 +130,21 @@ const MovesTreeMap: React.FC<MovesTreeMapProps> = ({ moveUsages, moveTypes }) =>
             x={x + width / 2}
             y={y + height / 2}
             textAnchor="middle"
+            dominantBaseline="middle"
             fill="#fff"
             className="text-xs font-medium"
-            style={{ textShadow: '1px 1px 1px rgba(0,0,0,0.5)' }}
+            style={{ 
+              textShadow: '1px 1px 2px rgba(0,0,0,0.75)',
+              pointerEvents: 'none'
+            }}
           >
             {name}
           </text>
         )}
       </g>
     );
-  };
+  });
+  CustomContent.displayName = 'CustomContent';
 
   if (validMoveUsages.length === 0) {
     return (
@@ -126,6 +157,20 @@ const MovesTreeMap: React.FC<MovesTreeMapProps> = ({ moveUsages, moveTypes }) =>
       </Card>
     );
   }
+
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Move Usage Distribution</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Skeleton className="h-[500px] w-full" />
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -139,34 +184,9 @@ const MovesTreeMap: React.FC<MovesTreeMapProps> = ({ moveUsages, moveTypes }) =>
               dataKey="size"
               aspectRatio={4/3}
               stroke="#fff"
+              content={<CustomContent />}
             >
-              <Tooltip content={({ active, payload }) => {
-                if (active && payload && payload.length > 0) {
-                  const data = payload[0].payload;
-                  const moveData = validMoveUsages.find(m => m.move === data.name);
-                  const type = moveTypes[data.name] || 'normal';
-                  
-                  return (
-                    <div className="bg-white p-2 shadow-lg rounded-lg border">
-                      <p className="font-medium">{data.name}</p>
-                      <p className="text-sm" style={{ color: typeColors[type]?.color }}>
-                        Type: {type.charAt(0).toUpperCase() + type.slice(1)}
-                      </p>
-                      {moveData && (
-                        <>
-                          <p className="text-sm text-muted-foreground">
-                            Usage Range: {moveData.min.toFixed(1)}% - {moveData.max.toFixed(1)}%
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Data Points: {moveData.avgPoints}
-                          </p>
-                        </>
-                      )}
-                    </div>
-                  );
-                }
-                return null;
-              }} />
+              <Tooltip content={<CustomTooltip />} />
             </Treemap>
           </ResponsiveContainer>
         </div>

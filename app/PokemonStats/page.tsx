@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { usePokemonData } from '@/hooks/usePokemonData';
 import { PokemonModalSelector } from '@/components/PokemonStatsDisplay/PokemonSelector';
@@ -21,7 +21,12 @@ import {
   PolarRadiusAxis, 
   Radar,
   ResponsiveContainer,
-  Tooltip
+  Tooltip,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
 } from 'recharts';
 import { CounterMatrix } from '@/components/PokemonStatsDisplay/CounterMatrix';
 import { NetworkGraph } from '@/components/PokemonStatsDisplay/NetworkGraph';
@@ -60,6 +65,8 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   }
   return null;
 };
+
+
 
 export default function Page() {
   // State for format selection and Pokemon
@@ -182,42 +189,16 @@ export default function Page() {
   );
 
   const renderPokemonSelector = () => (
-    <Card className="mb-6">
-      <CardContent className="p-6">
+    <div>
         {selectedPokemon && pokemonData ? (
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-center gap-4">
             <div className="flex items-center gap-4">
-              {pokemonData.sprite && (
-                <div className="relative w-16 h-16">
-                  <Image
-                    src={pokemonData.sprite}
-                    alt={pokemonData.name}
-                    fill
-                    className="object-contain"
-                  />
-                </div>
-              )}
               <div>
-                <h3 className="text-lg font-semibold mb-2">
+                <h1 className="text-lg font-semibold mb-2">
                   {pokemonData.name.split('-').map(word => 
                     word.charAt(0).toUpperCase() + word.slice(1)
                   ).join(' ')}
-                </h3>
-                <div className="flex gap-2">
-                  {pokemonData.types?.map(type => (
-                    <Badge
-                      key={type}
-                      variant="secondary"
-                      className={cn(
-                        "text-xs",
-                        typeColors[type.toLowerCase()]?.bg,
-                        typeColors[type.toLowerCase()]?.text
-                      )}
-                    >
-                      {type}
-                    </Badge>
-                  ))}
-                </div>
+                </h1>
               </div>
             </div>
             <Button 
@@ -236,9 +217,39 @@ export default function Page() {
             {cacheLoading ? "Loading Pokemon Data..." : "Select Pokemon"}
           </Button>
         )}
-      </CardContent>
-    </Card>
+      </div>
   );
+
+  const StatBar = ({ stat, value, maxValue = 255 }: { stat: string; value: number; maxValue?: number }) => {
+    const getStatColor = (statName: string) => {
+      const colors = {
+        'HP': 'var(--stat-hp)',
+        'Attack': 'var(--stat-atk)',
+        'Defense': 'var(--stat-def)',
+        'Sp. Atk': 'var(--stat-spa)',
+        'Sp. Def': 'var(--stat-spd)',
+        'Speed': 'var(--stat-spe)',
+      } as const;
+      return colors[statName as keyof typeof colors] || 'hsl(var(--primary))';
+    };
+    return (
+      <div className="flex items-center gap-4 w-full">
+        <span className="text-sm font-medium w-16">{stat}</span>
+        <div className="flex-1 h-4 bg-muted rounded-full overflow-hidden">
+          <div
+            className="h-full rounded-full transition-all duration-500"
+            style={{
+              width: `${(value / maxValue) * 100}%`,
+              backgroundColor: getStatColor(stat),
+            }}
+          />
+        </div>
+        <span className="text-sm tabular-nums">{value}</span>
+      </div>
+    );
+  };
+
+  
 
   return (
     <div className="container mx-auto p-4 space-y-6">
@@ -248,7 +259,7 @@ export default function Page() {
       </div>
 
       {/* Format and Generation Selectors */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-1 gap-4">
         {renderFormatSelector()}
       </div>
 
@@ -295,44 +306,57 @@ export default function Page() {
             </div>
 
             {/* Stats Radar Chart */}
-            <div className="flex-1">
-              <h2 className="text-lg font-semibold mb-4">Base Stats</h2>
-              <div className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <RadarChart data={[
-                    { stat: 'HP', value: pokemonData?.stats.hp },
-                    { stat: 'Attack', value: pokemonData?.stats.attack },
-                    { stat: 'Defense', value: pokemonData?.stats.defense },
-                    { stat: 'Sp. Atk', value: pokemonData?.stats.special_attack },
-                    { stat: 'Sp. Def', value: pokemonData?.stats.special_defense },
-                    { stat: 'Speed', value: pokemonData?.stats.speed },
-                  ]}>
-                    <PolarGrid 
-                      strokeOpacity={0.2}
-                      stroke="currentColor"
-                    />
-                    <PolarAngleAxis 
-                      dataKey="stat"
-                      tick={{ fill: 'currentColor' }}
-                    />
-                    <PolarRadiusAxis 
-                      angle={30} 
-                      domain={[0, 255]}
-                      stroke="currentColor"
-                      tickCount={6}
-                    />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Radar
-                      name="Stats"
-                      dataKey="value"
-                      stroke="hsl(var(--primary))"
-                      fill="hsl(var(--primary))"
-                      fillOpacity={0.3}
-                    />
-                  </RadarChart>
-                </ResponsiveContainer>
+            <div className="flex-1 grid grid-cols-2 gap-8">
+              <div>
+                <h2 className="text-lg font-semibold mb-4">Base Stats</h2>
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RadarChart data={[
+                      { stat: 'HP', value: pokemonData?.stats.hp },
+                      { stat: 'Attack', value: pokemonData?.stats.attack },
+                      { stat: 'Defense', value: pokemonData?.stats.defense },
+                      { stat: 'Sp. Atk', value: pokemonData?.stats.special_attack },
+                      { stat: 'Sp. Def', value: pokemonData?.stats.special_defense },
+                      { stat: 'Speed', value: pokemonData?.stats.speed },
+                    ]}>
+                      <PolarGrid 
+                        strokeOpacity={0.2}
+                        stroke="currentColor"
+                      />
+                      <PolarAngleAxis 
+                        dataKey="stat"
+                        tick={{ fill: 'currentColor' }}
+                      />
+                      <PolarRadiusAxis 
+                        angle={30} 
+                        domain={[0, 255]}
+                        stroke="currentColor"
+                        tickCount={6}
+                      />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Radar
+                        name="Stats"
+                        dataKey="value"
+                        stroke="hsl(var(--primary))"
+                        fill="hsl(var(--primary))"
+                        fillOpacity={0.3}
+                      />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+              
+              <div className="flex flex-col justify-center space-y-4">
+                <StatBar stat="HP" value={pokemonData?.stats.hp || 0} />
+                <StatBar stat="Attack" value={pokemonData?.stats.attack || 0} />
+                <StatBar stat="Defense" value={pokemonData?.stats.defense || 0} />
+                <StatBar stat="Sp. Atk" value={pokemonData?.stats.special_attack || 0} />
+                <StatBar stat="Sp. Def" value={pokemonData?.stats.special_defense || 0} />
+                <StatBar stat="Speed" value={pokemonData?.stats.speed || 0} />
               </div>
             </div>
+          
+          
           </div>
 
           {/* Description and Abilities */}
@@ -365,12 +389,12 @@ export default function Page() {
                     className="flex flex-col items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
                     onClick={() => handlePokemonSelect(evo.name)}
                   >
-                    <div className="relative w-16 h-16">
+                    <div className="relative w-32 h-32">
                       <Image
                         src={evo.sprite}
                         alt={evo.name}
                         fill
-                        className="object-contain pixelated"
+                        className="object-contain"
                       />
                     </div>
                     <span className="text-sm font-medium capitalize">{evo.name}</span>
@@ -387,13 +411,16 @@ export default function Page() {
             format={selectedFormat}
             moves={pokemonDetails?.moves || []}
           />
-
+          <div className='grid grid-cols-2 gap-6'>
+            <div className='p-6 pt-0 '> 
           <NetworkGraph
             pokemonName={selectedPokemon}
             generation={selectedGeneration}
             format={selectedFormat}
             onPokemonSelect={handlePokemonSelect}
           />
+          </div>
+          <div className='p-6 pt-0'> 
 
           <CounterMatrix
             pokemonName={selectedPokemon}
@@ -401,6 +428,11 @@ export default function Page() {
             format={selectedFormat}
             onPokemonSelect={handlePokemonSelect}
           />
+          </div>
+          </div>
+          
+
+          
         </div>
       )}
 
