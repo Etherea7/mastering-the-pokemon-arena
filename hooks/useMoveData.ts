@@ -9,6 +9,10 @@ interface Move {
   pp: number;
   damage_class: string;
   effect_entries: string[];
+  learned_by_pokemon: Array<{
+    name: string;
+    url: string;
+  }>;
 }
 
 interface MoveCache {
@@ -18,7 +22,7 @@ interface MoveCache {
 
 const CACHE_KEY = 'pokemon-moves-cache';
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
-const MOVES_PER_BATCH = 100;
+const MOVES_PER_BATCH = 20; // Reduced batch size since we're fetching more data
 
 export function useMoveData() {
   const [moves, setMoves] = useState<Record<string, Move>>({});
@@ -45,13 +49,11 @@ export function useMoveData() {
 
       try {
         setLoading(true);
-        // First, get the total count of moves
         const listResponse = await fetch('https://pokeapi.co/api/v2/move?limit=1');
         const listData = await listResponse.json();
         const total = listData.count;
         setProgress({ current: 0, total });
 
-        // Fetch moves in batches
         const allMoves: Record<string, Move> = {};
         for (let offset = 0; offset < total; offset += MOVES_PER_BATCH) {
           const batchResponse = await fetch(
@@ -59,7 +61,6 @@ export function useMoveData() {
           );
           const batchData = await batchResponse.json();
 
-          // Fetch details for each move in the batch
           const movePromises = batchData.results.map(async (move: { url: string }) => {
             const moveResponse = await fetch(move.url);
             const moveData = await moveResponse.json();
@@ -74,7 +75,8 @@ export function useMoveData() {
               damage_class: moveData.damage_class.name,
               effect_entries: moveData.effect_entries
                 .filter((entry: any) => entry.language.name === 'en')
-                .map((entry: any) => entry.effect)
+                .map((entry: any) => entry.effect),
+              learned_by_pokemon: moveData.learned_by_pokemon || []
             };
           });
 
@@ -86,7 +88,6 @@ export function useMoveData() {
           setProgress({ current: offset + MOVES_PER_BATCH, total });
         }
 
-        // Cache the data
         localStorage.setItem(CACHE_KEY, JSON.stringify({
           data: allMoves,
           timestamp: Date.now()
@@ -107,31 +108,4 @@ export function useMoveData() {
   return { moves, loading, error, progress };
 }
 
-// Helper functions for data processing
-export function getMovesByType(moves: Record<string, Move>) {
-  const byType: Record<string, Move[]> = {};
-  Object.values(moves).forEach(move => {
-    if (!byType[move.type]) {
-      byType[move.type] = [];
-    }
-    byType[move.type].push(move);
-  });
-  return byType;
-}
-
-export function getMoveCountsByTypeAndCategory(moves: Record<string, Move>) {
-  const counts: Record<string, Record<string, number>> = {};
-  Object.values(moves).forEach(move => {
-    if (!counts[move.type]) {
-      counts[move.type] = { physical: 0, special: 0, status: 0 };
-    }
-    counts[move.type][move.damage_class]++;
-  });
-  return counts;
-}
-
-export function formatMoveName(name: string): string {
-  return name.split('-').map(word => 
-    word.charAt(0).toUpperCase() + word.slice(1)
-  ).join(' ');
-}
+// Helper functions remain the same...

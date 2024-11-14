@@ -5,24 +5,33 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { TypeMovesVisualization } from '@/components/moves/TypeMovesVisualization';
+import { MoveTypeHeatmap } from '@/components/moves/MoveTypeHeatmap';
+import { AveragePowerStats } from '@/components/moves/AveragePowerStats';
+import { PowerAccuracyScatter } from '@/components/moves/PowerAccuracyScatter';
+import { MoveCategoryPieChart } from '@/components/moves/MoveCategoryPieChart';
+import { MovesComparisonTable } from '@/components/moves/MovesComparisonTable';
+import { usePokemonData } from '@/hooks/usePokemonData';
 import { useMoveData } from '@/hooks/useMoveData';
-import { MoveTypeHeatmap } from "@/components/moves/TypeMovesHeatmap";
-import { AveragePowerStats } from "@/components/moves/AvergagePowerStats";
 
 export default function MovesPage() {
-  const { moves, loading, error, progress } = useMoveData();
+  const { moves, loading: movesLoading, error: movesError, progress } = useMoveData();
+  const { 
+    cache: pokemonCache, 
+    fetchPokemonBatch,
+    loading: pokemonLoading 
+  } = usePokemonData();
 
-  if (error) {
+  if (movesError) {
     return (
       <div className="container mx-auto p-4">
         <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>{movesError}</AlertDescription>
         </Alert>
       </div>
     );
   }
 
-  if (loading) {
+  if (movesLoading || pokemonLoading) {
     return (
       <div className="container mx-auto p-4 space-y-4">
         <div className="space-y-2">
@@ -40,31 +49,34 @@ export default function MovesPage() {
     );
   }
 
+  console.log('Moves data:', Object.keys(moves).length);
+  console.log('Pokemon cache:', Object.keys(pokemonCache).length);
+
   return (
     <div className="container mx-auto p-4 space-y-6">
       <h1 className="text-2xl font-bold">Pokemon Moves Analysis</h1>
       
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Type-Based Move Count */}
-            <TypeMovesVisualization moves={moves} />
-            <MoveTypeHeatmap moves={moves} />
-        </div>
-        <AveragePowerStats moves={moves} />
-        {/* Placeholder for Power vs. Accuracy Scatter Plot */}
-        <Card className="h-[500px]">
-          {/* Will implement Scatter Plot component next */}
-        </Card>
-        
-        {/* Placeholder for Move Category Proportion */}
-        <Card className="h-[500px]">
-          {/* Will implement Pie Chart component next */}
-        </Card>
-        
-        {/* Placeholder for Move Comparison Table */}
-        <Card className="h-[500px]">
-          {/* Will implement Table component next */}
-        </Card>
+      {/* Type Distribution Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <TypeMovesVisualization moves={moves} />
+        <MoveTypeHeatmap moves={moves} />
       </div>
-    
+
+      {/* Power Analysis Section */}
+      <AveragePowerStats moves={moves} />
+
+      {/* Scatter Plot and Pie Chart */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <PowerAccuracyScatter moves={moves} />
+        <MoveCategoryPieChart moves={moves} />
+      </div>
+
+      {/* Moves Table */}
+      <MovesComparisonTable 
+        moves={moves} 
+        pokemonCache={pokemonCache}
+        fetchPokemonBatch={fetchPokemonBatch}
+      />
+    </div>
   );
 }

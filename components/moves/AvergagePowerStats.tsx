@@ -12,6 +12,7 @@ import {
   Tooltip,
   ResponsiveContainer
 } from 'recharts';
+import { TypeMovesVisualization } from "./TypeMovesVisualization";
 
 interface Move {
   id: number;
