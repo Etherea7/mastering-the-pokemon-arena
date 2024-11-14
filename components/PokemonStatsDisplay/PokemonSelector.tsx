@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -19,6 +19,11 @@ interface PokemonModalSelectorProps {
   format: BattleFormat;
 }
 
+interface PokemonWithUsage {
+  name: string;
+  usage: number;
+}
+
 export function PokemonModalSelector({
   open,
   onClose,
@@ -28,7 +33,7 @@ export function PokemonModalSelector({
 }: PokemonModalSelectorProps) {
   const [search, setSearch] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [pokemonList, setPokemonList] = useState<string[]>([]);
+  const [pokemonList, setPokemonList] = useState<PokemonWithUsage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Use the Pokemon data hook
@@ -63,16 +68,32 @@ export function PokemonModalSelector({
           throw new Error('Invalid data format received');
         }
 
-        // Extract unique Pokemon names from usage data
-        const uniquePokemon = Array.from(new Set(
-          result.data.map((entry: any) => entry.name)
-        )).sort();
+        // Process and sort Pokemon by usage
+        const processedPokemon = result.data
+          .reduce((acc: PokemonWithUsage[], entry: any) => {
+            // Check if we already have this Pokemon
+            const existing = acc.find(p => p.name === entry.name);
+            if (existing) {
+              // Update usage if the new value is higher
+              if (entry.usage_percent > existing.usage) {
+                existing.usage = entry.usage_percent;
+              }
+            } else {
+              // Add new Pokemon
+              acc.push({
+                name: entry.name,
+                usage: entry.usage_percent || 0
+              });
+            }
+            return acc;
+          }, [])
+          .sort((a:PokemonWithUsage, b:PokemonWithUsage) => b.usage - a.usage);
 
-        console.log('Unique Pokemon found:', uniquePokemon.length);
-        setPokemonList(uniquePokemon as string[]);
+        console.log('Processed Pokemon:', processedPokemon.length);
+        setPokemonList(processedPokemon);
 
         // Fetch Pokemon details for the list
-        await fetchPokemonBatch(uniquePokemon as string[], (current, total) => {
+        await fetchPokemonBatch(processedPokemon.map((p:PokemonWithUsage) => p.name), (current, total) => {
           console.log(`Fetching Pokemon data: ${current}/${total}`);
         });
 
@@ -89,7 +110,7 @@ export function PokemonModalSelector({
   }, [open, generation, format, fetchPokemonBatch]);
 
   const filteredPokemon = pokemonList.filter(pokemon =>
-    pokemon.toLowerCase().includes(search.toLowerCase())
+    pokemon.name.toLowerCase().includes(search.toLowerCase())
   );
 
   const formatPokemonName = (name: string) => {
@@ -130,12 +151,12 @@ export function PokemonModalSelector({
             <ScrollArea className="h-[400px]">
               <div className="grid grid-cols-2 gap-2 pr-4">
                 {filteredPokemon.map((pokemon) => {
-                  const pokemonData = cache[pokemon];
+                  const pokemonData = cache[pokemon.name];
                   return (
                     <button
-                      key={pokemon}
+                      key={pokemon.name}
                       onClick={() => {
-                        onSelect(pokemon);
+                        onSelect(pokemon.name);
                         onClose();
                       }}
                       className={cn(
@@ -149,7 +170,7 @@ export function PokemonModalSelector({
                         <div className="relative w-10 h-10 flex-shrink-0">
                           <Image
                             src={pokemonData.sprite}
-                            alt={pokemon}
+                            alt={pokemon.name}
                             fill
                             className=""
                           />
@@ -157,7 +178,7 @@ export function PokemonModalSelector({
                       )}
                       <div className="flex flex-col min-w-0">
                         <span className="font-medium truncate">
-                          {formatPokemonName(pokemon)}
+                          {formatPokemonName(pokemon.name)}
                         </span>
                         <div className="flex gap-1 flex-wrap">
                           {pokemonData?.types?.map(type => (
