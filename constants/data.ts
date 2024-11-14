@@ -2,28 +2,33 @@ import { NavItem } from '@/types';
 
 export const navItems: NavItem[] = [
   {
+    title: 'Pokemon Stats',
+    href: '/PokemonStats',
+    icon: 'pokeball', // Pokeball
+    label: 'Pokemon Stats'
+  },
+  {
     title: 'Format/Generation',
     href: '/GenFormat',
-    icon: 'dashboard',
+    icon: 'pokeball', // Pokeball
     label: 'Generation Analysis'
   },
   {
     title: 'Types',
     href: '/Types',
-    icon: 'dashboard',
+    icon: 'pokeball', // Pokeball
     label: 'Types'
   },
   {
     title: 'TeamChooser',
     href: '/PokemonTeamChooser',
-    icon: 'dashboard',
+    icon: 'pokeball', // Pokeball
     label: 'PokemonTeamChooser'
   },
   {
     title: 'Usage',
     href: '/PokemonUsageDashboard',
-    icon: 'dashboard',
-    label: 'PokemomUsageDashboard'
-  },
-  
+    icon: 'pokeball', // Pokeball
+    label: 'PokemonUsageDashboard'
+  }
 ];

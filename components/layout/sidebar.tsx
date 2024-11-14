@@ -1,12 +1,13 @@
 'use client';
 import React from 'react';
+import Image from 'next/image'; // Add this import
 import { DashboardNav } from '@/components/dashboard-nav';
 import { navItems } from '@/constants/data';
 import { cn } from '@/lib/utils';
-import { ChevronLeft, Sun, Moon } from 'lucide-react'; // Import Sun and Moon icons
+import { ChevronLeft, Sun, Moon } from 'lucide-react';
 import { useSidebar } from '@/hooks/useSidebar';
-import { useTheme } from 'next-themes'; // Import useTheme hook
-import { Button } from '@/components/ui/button'; // Import Button component
+import { useTheme } from 'next-themes';
+import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 
 type SidebarProps = {
@@ -34,23 +35,17 @@ export default function Sidebar({ className }: SidebarProps) {
       )}
     >
       <div className="flex items-center justify-between p-5 pt-10">
-        <div className="hidden lg:block">
-          <Link
-            href={'https://github.com/Kiranism/next-shadcn-dashboard-starter'}
-            target="_blank"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="mr-2 h-6 w-6"
-            >
-              <path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3" />
-            </svg>
+        <div className={cn("transition-all duration-300", 
+          isMinimized ? "w-full flex justify-center" : "w-auto"
+        )}>
+          <Link href="/">
+            <Image
+              src="/pokemonLogo.png"
+              alt="Pokemon Logo"
+              width={isMinimized ? 80 : 100}
+              height={isMinimized ? 80 : 100}
+              className="transition-transform duration-300 hover:scale-110"
+            />
           </Link>
         </div>
         <Button
@@ -58,7 +53,7 @@ export default function Sidebar({ className }: SidebarProps) {
           size="icon"
           className={cn(
             "rounded-full",
-            isMinimized && "mx-auto" // Center when minimized
+            isMinimized && "absolute right-0" // Position when minimized
           )}
           onClick={toggleTheme}
           title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
@@ -68,6 +63,7 @@ export default function Sidebar({ className }: SidebarProps) {
           <span className="sr-only">Toggle theme</span>
         </Button>
       </div>
+      {/* Rest of your sidebar code remains the same */}
       <ChevronLeft
         className={cn(
           'absolute -right-3 top-10 z-50 cursor-pointer rounded-full border bg-background text-3xl text-foreground',

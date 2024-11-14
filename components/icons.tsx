@@ -30,6 +30,7 @@ import {
   UserX2Icon,
   X
 } from 'lucide-react';
+import NextImage from 'next/image'; // Added for Pokeball image
 
 export type Icon = LucideIcon;
 
@@ -60,6 +61,24 @@ export const Icons = {
   sun: SunMedium,
   moon: Moon,
   laptop: Laptop,
+  pokeball: ({ ...props }: LucideProps) => ( // Added Pokeball icon
+    <NextImage
+      src="/pokeball.png"
+      alt="Pokeball"
+      width={16}
+      height={16}
+      {...props}
+    />
+  ),
+  pokemonLogo: ({ ...props }: LucideProps) => ( 
+    <NextImage
+      src="/pokemonLogo.png"
+      alt="pokemonLogo"
+      width={16}
+      height={16}
+      {...props}
+    />
+  ),
   gitHub: ({ ...props }: LucideProps) => (
     <svg
       aria-hidden="true"
