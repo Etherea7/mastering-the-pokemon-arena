@@ -30,5 +30,11 @@ export const navItems: NavItem[] = [
     href: '/PokemonUsageDashboard',
     icon: 'pokeball', // Pokeball
     label: 'PokemonUsageDashboard'
+  },
+  {
+    title: 'Moves',
+    href: '/Moves',
+    icon: 'pokeball', // Pokeball
+    label: 'Moves'
   }
 ];

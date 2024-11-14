@@ -109,7 +109,7 @@ const MovesTreeMap: React.FC<{
     height = 0,
     name = '',
     type = 'normal'
-  }: CustomContentProps) => {
+  }: Partial<CustomContentProps>) => {
     const typeKey = type.toLowerCase() as keyof typeof typeColors;
     const color = typeColors[typeKey]?.color || typeColors.normal.color;
     
