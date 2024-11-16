@@ -7,32 +7,32 @@ const redis = Redis.fromEnv();
 
 // Define interfaces for our data structures
 interface BaseStatsRecord {
-  usage: number | null
-  year_month: string
+  usage: number | null;
+  year_month: string;
 }
 
 interface AbilityRecord extends BaseStatsRecord {
-  ability: string
+  ability: string;
 }
 
 interface ItemRecord extends BaseStatsRecord {
-  item: string
+  item: string;
 }
 
 interface TeammateRecord extends BaseStatsRecord {
-  teammate: string
+  teammate: string;
 }
 
 interface CounterRecord {
-  opp_pokemon: string
-  lose_rate_against_opp: number | null
-  year_month: string
+  opp_pokemon: string;
+  lose_rate_against_opp: number | null;
+  year_month: string;
 }
 
 interface UsageRecord {
-  usage_percent: number | null
-  raw_count: bigint | number | null
-  year_month: string
+  usage_percent: number | null;
+  raw_count: bigint | number | null;
+  year_month: string;
 }
 
 // Helper function to calculate averages for abilities, items, and teammates
@@ -218,21 +218,59 @@ export async function GET(
     ]);
 
     // Process results and handle any failed queries
-    const [abilitiesResult, itemsResult, teammatesResult, countersResult, usageStatsResult] = 
-      await Promise.all(results.map(async (result) => {
+    const [
+      abilitiesResult,
+      itemsResult,
+      teammatesResult,
+      countersResult,
+      usageStatsResult
+    ] = await Promise.all(
+      results.map(async (result) => {
         if (result.status === 'fulfilled') {
           return result.value;
         }
         console.error('Query failed:', result.reason);
         return [];
-      }));
+      })
+    );
+
+    // Transform and type-check the results
+    const typedAbilities = (abilitiesResult as any[]).map(item => ({
+      year_month: item.year_month,
+      usage: item.usage,
+      ability: item.ability
+    })) satisfies AbilityRecord[];
+
+    const typedItems = (itemsResult as any[]).map(item => ({
+      year_month: item.year_month,
+      usage: item.usage,
+      item: item.item
+    })) satisfies ItemRecord[];
+
+    const typedTeammates = (teammatesResult as any[]).map(item => ({
+      year_month: item.year_month,
+      usage: item.usage,
+      teammate: item.teammate
+    })) satisfies TeammateRecord[];
+
+    const typedCounters = (countersResult as any[]).map(item => ({
+      year_month: item.year_month,
+      opp_pokemon: item.opp_pokemon,
+      lose_rate_against_opp: item.lose_rate_against_opp
+    })) satisfies CounterRecord[];
+
+    const typedUsageStats = (usageStatsResult as any[]).map(item => ({
+      year_month: item.year_month,
+      usage_percent: item.usage_percent,
+      raw_count: item.raw_count
+    })) satisfies UsageRecord[];
 
     // Calculate all averages using the helper functions
-    const topAbility = calculateAverages<AbilityRecord>(abilitiesResult, 'ability');
-    const topItem = calculateAverages<ItemRecord>(itemsResult, 'item');
-    const topTeammate = calculateAverages<TeammateRecord>(teammatesResult, 'teammate');
-    const bestCounter = calculateCounterAverages(countersResult);
-    const averageUsage = calculateUsageAverages(usageStatsResult);
+    const topAbility = calculateAverages<AbilityRecord>(typedAbilities, 'ability');
+    const topItem = calculateAverages<ItemRecord>(typedItems, 'item');
+    const topTeammate = calculateAverages<TeammateRecord>(typedTeammates, 'teammate');
+    const bestCounter = calculateCounterAverages(typedCounters);
+    const averageUsage = calculateUsageAverages(typedUsageStats);
 
     const data = {
       averageUsage,
