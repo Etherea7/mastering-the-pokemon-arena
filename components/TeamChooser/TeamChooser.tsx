@@ -406,7 +406,7 @@ export default function TeamChooser() {
                           src={member.sprite}
                           alt={member.name}
                           fill
-                          className="object-contain pixelated"
+                          className="object-contain "
                         />
                       </div>
                     )}

@@ -387,7 +387,7 @@ export function MovesComparisonTable({ moves }: MovesComparisonTableProps) {
                       src={pokemonCache[pokemon].sprite}
                       alt={pokemon}
                       fill
-                      className="object-contain pixelated"
+                      className="object-contain"
                     />
                   </div>
                 )}

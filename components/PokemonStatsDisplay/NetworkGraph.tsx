@@ -243,7 +243,7 @@ export function NetworkGraph({
                     y={-25}
                     width={50}
                     height={50}
-                    className="pixelated"
+                    className=""
                   />
                 )}
                 {renderNodeLabel(pokemonName, 0, 45)}

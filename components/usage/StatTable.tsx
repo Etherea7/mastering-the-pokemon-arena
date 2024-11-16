@@ -114,7 +114,7 @@ function PokemonDisplay({ name }: { name: string }) {
             alt={name}
             fill
             sizes="32px"
-            className="pixelated"
+            className=""
             priority
           />
         </div>

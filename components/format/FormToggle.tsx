@@ -53,7 +53,7 @@ function PokemonDisplay({ pokemon }: { pokemon: ExtendedFormatPokemonData }) {
               alt={pokemon.name}
               fill
               sizes="100%"
-              className="pixelated"
+              className=""
               priority
             />
           </div>

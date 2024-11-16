@@ -276,7 +276,7 @@ export function PokemonSelector({
                   alt={pokemon}
                   width={20}
                   height={20}
-                  className="pixelated"
+                  className=""
                 />
               )}
               {pokemon}
@@ -335,7 +335,7 @@ export function PokemonSelector({
                           alt={pokemon.name}
                           fill
                           sizes="32px"
-                          className="pixelated"
+                          className=""
                           priority
                         />
                       </div>

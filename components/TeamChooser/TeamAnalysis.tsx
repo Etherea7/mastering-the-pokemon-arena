@@ -69,7 +69,7 @@ export function TeamAnalysis({ team1, team2 }: TeamAnalysisProps) {
                     src={pokemon.sprite}
                     alt={pokemon.name || ''}
                     fill
-                    className="object-contain pixelated"
+                    className="object-contain"
                   />
                 </div>
               ) : (
@@ -197,7 +197,7 @@ export function TeamAnalysis({ team1, team2 }: TeamAnalysisProps) {
                         src={pokemon.sprite}
                         alt={pokemon.name || ''}
                         fill
-                        className="object-contain pixelated"
+                        className="object-contain"
                       />
                     )}
                   </div>

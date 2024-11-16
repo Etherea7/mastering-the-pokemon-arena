@@ -145,7 +145,7 @@ const PokemonListDialog = ({
                       src={pokemon.sprite}
                       alt={pokemon.name}
                       fill
-                      className="object-contain pixelated"
+                      className="object-contain"
                     />
                   </div>
                 )}

@@ -401,7 +401,7 @@ export function PokemonSetupModal({
                 alt={pokemon.name}
                 width={32}
                 height={32}
-                className="pixelated"
+                className=""
               />
             )}
             <span>Setup {pokemon.name}</span>
