@@ -44,7 +44,6 @@ export function PokemonModalSelector({
     async function fetchPokemonList() {
       if (!open) return;
 
-      console.log('Fetching Pokemon list...', { generation, format });
       setIsLoading(true);
       setError(null);
       
@@ -54,11 +53,11 @@ export function PokemonModalSelector({
           generation: generation,
         });
 
-        console.log('Fetching from:', `/api/pokemon/usage?${params}`);
+      
         const response = await fetch(`/api/pokemon/usage?${params}`);
         const result = await response.json();
         
-        console.log('API Response:', result);
+  
 
         if (!response.ok) {
           throw new Error(result.error || 'Failed to fetch Pokemon list');
@@ -89,7 +88,6 @@ export function PokemonModalSelector({
           }, [])
           .sort((a:PokemonWithUsage, b:PokemonWithUsage) => b.usage - a.usage);
 
-        console.log('Processed Pokemon:', processedPokemon.length);
         setPokemonList(processedPokemon);
 
         // Fetch Pokemon details for the list

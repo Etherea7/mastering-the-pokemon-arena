@@ -120,9 +120,14 @@ export async function GET(
     const cacheKey = `pokemon-stats:${pokemonName}:${generation}:${battleFormat}:${rating}:${yearMonthGte}:${yearMonthLte}`;
 
     // Try to get data from cache first
-    const cachedData = await redis.get(cacheKey);
-    if (cachedData) {
-      return successResponse(cachedData);
+    try {
+      const cachedData = await redis.get(cacheKey);
+      if (cachedData) {
+        return successResponse(cachedData);
+      }
+    } catch (error) {
+      console.warn('Redis cache error:', error);
+      // Continue without cache if Redis fails
     }
 
     if (!pokemonName) {
@@ -142,10 +147,16 @@ export async function GET(
       }
     };
 
-    // Fetch all relevant data for the date range
-    const [abilities, items, teammates, counters, usageStats] = await Promise.all([
+    const QUERY_LIMIT = 1000; // Limit the number of records per query
+    
+    // Fetch all relevant data for the date range with limits
+    const results = await Promise.allSettled([
       prisma.pokemonAbilities.findMany({
         where,
+        take: QUERY_LIMIT,
+        orderBy: {
+          year_month: 'desc'
+        },
         select: {
           ability: true,
           usage: true,
@@ -155,6 +166,10 @@ export async function GET(
 
       prisma.pokemonItems.findMany({
         where,
+        take: QUERY_LIMIT,
+        orderBy: {
+          year_month: 'desc'
+        },
         select: {
           item: true,
           usage: true,
@@ -164,6 +179,10 @@ export async function GET(
 
       prisma.pokemonTeammates.findMany({
         where,
+        take: QUERY_LIMIT,
+        orderBy: {
+          year_month: 'desc'
+        },
         select: {
           teammate: true,
           usage: true,
@@ -173,6 +192,10 @@ export async function GET(
 
       prisma.pokemonCounters.findMany({
         where,
+        take: QUERY_LIMIT,
+        orderBy: {
+          year_month: 'desc'
+        },
         select: {
           opp_pokemon: true,
           lose_rate_against_opp: true,
@@ -182,6 +205,10 @@ export async function GET(
 
       prisma.pokemonUsage.findMany({
         where,
+        take: QUERY_LIMIT,
+        orderBy: {
+          year_month: 'desc'
+        },
         select: {
           usage_percent: true,
           raw_count: true,
@@ -190,12 +217,22 @@ export async function GET(
       })
     ]);
 
+    // Process results and handle any failed queries
+    const [abilitiesResult, itemsResult, teammatesResult, countersResult, usageStatsResult] = 
+      await Promise.all(results.map(async (result) => {
+        if (result.status === 'fulfilled') {
+          return result.value;
+        }
+        console.error('Query failed:', result.reason);
+        return [];
+      }));
+
     // Calculate all averages using the helper functions
-    const topAbility = calculateAverages<AbilityRecord>(abilities, 'ability');
-    const topItem = calculateAverages<ItemRecord>(items, 'item');
-    const topTeammate = calculateAverages<TeammateRecord>(teammates, 'teammate');
-    const bestCounter = calculateCounterAverages(counters);
-    const averageUsage = calculateUsageAverages(usageStats);
+    const topAbility = calculateAverages<AbilityRecord>(abilitiesResult, 'ability');
+    const topItem = calculateAverages<ItemRecord>(itemsResult, 'item');
+    const topTeammate = calculateAverages<TeammateRecord>(teammatesResult, 'teammate');
+    const bestCounter = calculateCounterAverages(countersResult);
+    const averageUsage = calculateUsageAverages(usageStatsResult);
 
     const data = {
       averageUsage,
@@ -206,7 +243,12 @@ export async function GET(
     };
 
     // Cache the data for 1 hour
-    await redis.set(cacheKey, data, { ex: 3600 });
+    try {
+      await redis.set(cacheKey, data, { ex: 3600 });
+    } catch (error) {
+      console.warn('Redis cache set error:', error);
+      // Continue even if caching fails
+    }
 
     return successResponse(data);
   } catch (error) {

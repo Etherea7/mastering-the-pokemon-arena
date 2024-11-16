@@ -85,7 +85,7 @@ export function PokemonMoves({
         );
         const rawData: RawMoveData = await usageResponse.json();
         
-        console.log('Raw data received:', rawData);
+  
   
         // 2. Process the usage data - handle the nested data structure
         const processedUsages = Object.entries(rawData.data || {}).reduce((acc: ProcessedMoveUsage[], [moveName, monthlyData]) => {
@@ -115,7 +115,7 @@ export function PokemonMoves({
           return acc;
         }, []);
   
-        console.log('Processed usages:', processedUsages);
+
         setMoveUsages(processedUsages);
   
         // Rest of the code remains the same...

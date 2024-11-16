@@ -10,13 +10,6 @@ export async function GET(request: Request) {
     const year_month_gte = searchParams.get('year_month_gte')
     const year_month_lte = searchParams.get('year_month_lte')
     const rating = searchParams.get('rating');
-    
-    console.log('Querying with params:', { 
-      battle_format, 
-      generation,
-      year_month_gte,
-      year_month_lte 
-    })
 
     const where: any = {}
 
@@ -44,7 +37,6 @@ export async function GET(request: Request) {
       }
     }
 
-    console.log('Final where clause:', where)
 
     const data = await prisma.pokemonUsage.findMany({
       where,

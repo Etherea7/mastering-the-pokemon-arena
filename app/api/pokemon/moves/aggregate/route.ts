@@ -46,14 +46,6 @@ export async function GET(request: Request) {
       });
     });
 
-    // Add some logging to verify the data
-    console.log('Sample move usage ranges:', Object.entries(groupedData).map(([move, data]) => ({
-      move,
-      min: Math.min(...data.map(d => d.usage)),
-      max: Math.max(...data.map(d => d.usage)),
-      avgPoints: data.length
-    })));
-
     return successResponse({
       data: groupedData,
     });

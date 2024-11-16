@@ -294,7 +294,7 @@ export function MovesComparisonTable({ moves }: MovesComparisonTableProps) {
                 {filteredAndSortedMoves.map((move) => (
                   <TableRow 
                     key={move.id}
-                    className="cursor-pointer hover:bg-muted/50"
+                    className="cursor-pointer hover:bg-muted/50 motion-preset-slide-up"
                     onClick={() => {
                       setSelectedMove(move.name);
                       fetchLearnsetPokemon(move.name);

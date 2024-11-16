@@ -207,7 +207,7 @@ export default function TeamChooser() {
       }
   
       const data: FormatUsageResponse = await response.json();
-      console.log('Usage data received:', data.data.length, 'Pokemon');
+
       
       const uniquePokemon = Array.from(new Set(
         data.data.map(entry => entry.name)

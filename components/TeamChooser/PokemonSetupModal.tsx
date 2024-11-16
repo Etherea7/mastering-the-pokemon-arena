@@ -326,7 +326,7 @@ export function PokemonSetupModal({
           movesRes.json(),
           spreadsRes.json()
         ]);
-        console.log(abilities, items, moves, spreads);
+     
 
         const aggregatedSetups = {
             ability: aggregateData(abilities.data || [], (item: AbilityData) => item.Ability),

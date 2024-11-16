@@ -70,7 +70,7 @@ export function MoveTypeHeatmap({ moves }: MoveTypeHeatmapProps) {
         <CardTitle>Move Distribution Heatmap</CardTitle>
       </CardHeader>
       <CardContent className="flex-1 overflow-auto">
-        <div className="grid grid-cols-[auto_1fr_1fr_1fr] gap-2 min-w-[600px]">
+        <div className="grid grid-cols-[auto_1fr_1fr_1fr] gap-1 min-w-[600px]">
           {/* Header */}
           <div className="sticky top-0 bg-background z-10"></div>
           <div className="sticky top-0 bg-background z-10 text-center font-medium">Physical</div>
@@ -79,15 +79,15 @@ export function MoveTypeHeatmap({ moves }: MoveTypeHeatmapProps) {
 
           {/* Data rows */}
           {data.map(({ type, physical, special, status, total, percentageOfTotal }) => (
-            <TooltipProvider key={type} delayDuration={0}>
+            <TooltipProvider key={type}>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <div className="contents">
+                  <div className="contents group">
                     <div className="flex items-center">
                       <Badge
                         variant="secondary"
                         className={cn(
-                          "w-20",
+                          "w-16 text-sm",
                           typeColors[type.toLowerCase()]?.bg,
                           typeColors[type.toLowerCase()]?.text
                         )}
@@ -96,7 +96,7 @@ export function MoveTypeHeatmap({ moves }: MoveTypeHeatmapProps) {
                       </Badge>
                     </div>
                     <div 
-                      className="p-4 text-center transition-colors hover:bg-muted/50"
+                      className="py-2 px-3 text-center text-sm transition-colors hover:bg-muted/50"
                       style={{
                         backgroundColor: `hsla(var(--primary) / ${getIntensity(physical)})`
                       }}
@@ -104,7 +104,7 @@ export function MoveTypeHeatmap({ moves }: MoveTypeHeatmapProps) {
                       {physical}
                     </div>
                     <div 
-                      className="p-4 text-center transition-colors hover:bg-muted/50"
+                      className="py-2 px-3 text-center text-sm transition-colors hover:bg-muted/50"
                       style={{
                         backgroundColor: `hsla(var(--accent) / ${getIntensity(special)})`
                       }}
@@ -112,7 +112,7 @@ export function MoveTypeHeatmap({ moves }: MoveTypeHeatmapProps) {
                       {special}
                     </div>
                     <div 
-                      className="p-4 text-center transition-colors hover:bg-muted/50"
+                      className="py-2 px-3 text-center text-sm transition-colors hover:bg-muted/50"
                       style={{
                         backgroundColor: `hsla(var(--secondary) / ${getIntensity(status)})`
                       }}
@@ -121,7 +121,11 @@ export function MoveTypeHeatmap({ moves }: MoveTypeHeatmapProps) {
                     </div>
                   </div>
                 </TooltipTrigger>
-                <TooltipContent side="right" align="start">
+                <TooltipContent 
+                  side="right" 
+                  align="center"
+                  className="z-50"
+                >
                   <div className="space-y-1">
                     <div className="font-medium">{type} Type Moves</div>
                     <div className="text-sm">Total: {total} moves</div>
