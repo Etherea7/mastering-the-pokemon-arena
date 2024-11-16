@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { getFromCache, setCache } from '@/lib/redis';
 
 interface Move {
   id: number;
@@ -9,7 +10,7 @@ interface Move {
   pp: number;
   damage_class: string;
   effect_entries: string[];
-  url: string; // Add this to store the move's URL
+  url: string;
 }
 
 interface MoveCache {
@@ -18,6 +19,7 @@ interface MoveCache {
 }
 
 const CACHE_KEY = 'pokemon-moves-cache';
+const REDIS_CACHE_KEY = 'pokemon-moves-data';
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 const MOVES_PER_BATCH = 100;
 
@@ -28,7 +30,8 @@ export function useMoveData() {
   const [progress, setProgress] = useState({ current: 0, total: 0 });
 
   useEffect(() => {
-    const loadCache = () => {
+    const loadCache = async () => {
+      // Try localStorage first
       const cached = localStorage.getItem(CACHE_KEY);
       if (cached) {
         const { data, timestamp }: MoveCache = JSON.parse(cached);
@@ -38,13 +41,27 @@ export function useMoveData() {
           return true;
         }
       }
+
+      // Try Redis cache
+      const redisData = await getFromCache<Record<string, Move>>(REDIS_CACHE_KEY);
+      if (redisData) {
+        setMoves(redisData);
+        // Update localStorage cache
+        localStorage.setItem(CACHE_KEY, JSON.stringify({
+          data: redisData,
+          timestamp: Date.now()
+        }));
+        setLoading(false);
+        return true;
+      }
+
       return false;
     };
 
     const fetchMoves = async () => {
-      if (loadCache()) return;
-
       try {
+        if (await loadCache()) return;
+
         setLoading(true);
         const listResponse = await fetch('https://pokeapi.co/api/v2/move?limit=1');
         const listData = await listResponse.json();
@@ -52,49 +69,42 @@ export function useMoveData() {
         setProgress({ current: 0, total });
 
         const allMoves: Record<string, Move> = {};
-        for (let offset = 0; offset < total; offset += MOVES_PER_BATCH) {
-          const batchResponse = await fetch(
-            `https://pokeapi.co/api/v2/move?limit=${MOVES_PER_BATCH}&offset=${offset}`
+        for (let i = 0; i < total; i += MOVES_PER_BATCH) {
+          const batch = await Promise.all(
+            Array.from({ length: Math.min(MOVES_PER_BATCH, total - i) }, (_, index) =>
+              fetch(`https://pokeapi.co/api/v2/move/${i + index + 1}`).then(res => res.json())
+            )
           );
-          const batchData = await batchResponse.json();
 
-          const movePromises = batchData.results.map(async (move: { url: string }) => {
-            const moveResponse = await fetch(move.url);
-            const moveData = await moveResponse.json();
-
-            return {
-              id: moveData.id,
-              name: moveData.name,
-              type: moveData.type.name,
-              power: moveData.power,
-              accuracy: moveData.accuracy,
-              pp: moveData.pp,
-              damage_class: moveData.damage_class.name,
-              effect_entries: moveData.effect_entries
-                .filter((entry: any) => entry.language.name === 'en')
-                .map((entry: any) => entry.effect),
-              url: move.url // Store the URL for later use
+          batch.forEach(move => {
+            allMoves[move.name] = {
+              id: move.id,
+              name: move.name,
+              type: move.type.name,
+              power: move.power,
+              accuracy: move.accuracy,
+              pp: move.pp,
+              damage_class: move.damage_class.name,
+              effect_entries: move.effect_entries.map((entry: any) => entry.effect),
+              url: `https://pokeapi.co/api/v2/move/${move.id}`
             };
           });
 
-          const movesData = await Promise.all(movePromises);
-          movesData.forEach((move) => {
-            allMoves[move.name] = move;
-          });
-
-          setProgress({ current: offset + MOVES_PER_BATCH, total });
+          setProgress({ current: i + batch.length, total });
+          setMoves(allMoves);
         }
 
+        // Save to both caches
         localStorage.setItem(CACHE_KEY, JSON.stringify({
           data: allMoves,
           timestamp: Date.now()
         }));
+        await setCache(REDIS_CACHE_KEY, allMoves, 24 * 60 * 60); // 24 hours
 
-        setMoves(allMoves);
-        setError(null);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch moves');
-      } finally {
+        setLoading(false);
+      } catch (error) {
+        console.error('Error fetching moves:', error);
+        setError('Failed to fetch moves data');
         setLoading(false);
       }
     };

@@ -1,6 +1,9 @@
 // app/api/pokemon/stats/[name]/route.ts
 import { prisma } from '@/lib/prisma';
 import { errorResponse, successResponse } from '@/lib/api';
+import { Redis } from '@upstash/redis';
+
+const redis = Redis.fromEnv();
 
 // Define interfaces for our data structures
 interface BaseStatsRecord {
@@ -113,6 +116,15 @@ export async function GET(
     const yearMonthGte = searchParams.get('year_month_gte');
     const yearMonthLte = searchParams.get('year_month_lte');
 
+    // Create a cache key based on the request parameters
+    const cacheKey = `pokemon-stats:${pokemonName}:${generation}:${battleFormat}:${rating}:${yearMonthGte}:${yearMonthLte}`;
+
+    // Try to get data from cache first
+    const cachedData = await redis.get(cacheKey);
+    if (cachedData) {
+      return successResponse(cachedData);
+    }
+
     if (!pokemonName) {
       return errorResponse('Pokemon name is required');
     }
@@ -185,13 +197,18 @@ export async function GET(
     const bestCounter = calculateCounterAverages(counters);
     const averageUsage = calculateUsageAverages(usageStats);
 
-    return successResponse({
+    const data = {
       averageUsage,
       topAbility,
       topItem,
       topTeammate,
       bestCounter
-    });
+    };
+
+    // Cache the data for 1 hour
+    await redis.set(cacheKey, data, { ex: 3600 });
+
+    return successResponse(data);
   } catch (error) {
     console.error('Error in API route:', error);
     return errorResponse('Failed to fetch Pokemon stats');

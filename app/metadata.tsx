@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
     title: 'Mastering the Pokemon Arena',
-    description: 'Basic dashboard with Next.js and Shadcn',
+    description: 'Pokemon Competitive Battling Dashboard',
     icons: '/starmie.png'
   };
   

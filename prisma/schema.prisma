@@ -18,6 +18,8 @@ model PokemonBase {
   rating            BigInt
   year_month        String
 
+  @@index([name, generation, battle_format, rating])
+  @@index([year_month])
   @@map("pokemon_base")
 }
 
@@ -35,6 +37,8 @@ model PokemonUsage {
   battle_format String
   rating        Int
 
+  @@index([name, generation, battle_format, rating])
+  @@index([year_month])
   @@map("pokemon_usage")
 }
 
@@ -48,6 +52,9 @@ model PokemonMoves {
   move          String
   usage         Float?
 
+  @@index([name, generation, battle_format, rating])
+  @@index([move])
+  @@index([year_month])
   @@map("pokemon_moves")
 }
 
@@ -61,6 +68,9 @@ model PokemonAbilities {
   ability       String
   usage         Float?
 
+  @@index([name, generation, battle_format, rating])
+  @@index([ability])
+  @@index([year_month])
   @@map("pokemon_abilities")
 }
 
@@ -74,6 +84,9 @@ model PokemonItems {
   item          String
   usage         Float?
 
+  @@index([name, generation, battle_format, rating])
+  @@index([item])
+  @@index([year_month])
   @@map("pokemon_items")
 }
 
@@ -87,6 +100,9 @@ model PokemonTeammates {
   teammate      String
   usage         Float?
 
+  @@index([name, generation, battle_format, rating])
+  @@index([teammate])
+  @@index([year_month])
   @@map("pokemon_teammates")
 }
 
@@ -106,6 +122,9 @@ model PokemonSpreads {
   spdef_ev      Int?
   spd_ev        Int?
 
+  @@index([name, generation, battle_format, rating])
+  @@index([nature])
+  @@index([year_month])
   @@map("pokemon_spreads")
 }
 
@@ -123,5 +142,8 @@ model PokemonCounters {
   ko_percent          Float?
   switch_percent      Float?
 
+  @@index([name, generation, battle_format, rating])
+  @@index([opp_pokemon])
+  @@index([year_month])
   @@map("pokemon_counters")
 }
