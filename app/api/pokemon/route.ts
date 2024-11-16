@@ -55,16 +55,24 @@ export async function GET(request: NextRequest) {
     }
 
     // Get distinct Pokemon names that match the criteria
-    const uniquePokemon = await prisma.pokemonBase.findMany({
+    const pokemonData = await prisma.pokemonBase.findMany({
       where,
-      distinct: ['name'],
-      select: { name: true },
-      orderBy: { name: 'asc' }
+      select: {
+        id: true,
+        name: true,
+        raw_count: true,
+        avg_weight: true,
+        viability_ceiling: true,
+        generation: true,
+        battle_format: true,
+        rating: true,
+        year_month: true
+      }
     });
-    
+
     // Transform the Pokemon list to include all forms and remove duplicates
     const expandedPokemonSet = new Set(
-      uniquePokemon.flatMap(pokemon => {
+      pokemonData.flatMap(pokemon => {
         const baseName = pokemon.name.toLowerCase();
         // If the Pokemon has specific forms in our mapping, use those
         if (POKEMON_FORM_MAPPING[baseName]) {

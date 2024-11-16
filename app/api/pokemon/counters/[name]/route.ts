@@ -33,14 +33,14 @@ export async function GET(
       },
       select: {
         opp_pokemon: true,
-        Lose_Rate_Against_Opp: true,
-        KO_Percent: true,
-        Switch_Percent: true,
+        lose_rate_against_opp: true,
+        ko_percent: true,
+        switch_percent: true,
         year_month: true,
         generation: true,
         battle_format: true,
-        Mean: true,
-        Std_Dev: true,
+        mean: true,
+        std_dev: true,
       },
     });
 
@@ -78,11 +78,11 @@ export async function GET(
         };
       }
       
-      acc[key].lose_rate_sum += counter.Lose_Rate_Against_Opp || 0;
-      acc[key].ko_percent_sum += counter.KO_Percent || 0;
-      acc[key].switch_percent_sum += counter.Switch_Percent || 0;
-      acc[key].mean_sum += counter.Mean || 0;
-      acc[key].std_dev_sum += counter.Std_Dev || 0;
+      acc[key].lose_rate_sum += counter.lose_rate_against_opp || 0;
+      acc[key].ko_percent_sum += counter.ko_percent || 0;
+      acc[key].switch_percent_sum += counter.switch_percent || 0;
+      acc[key].mean_sum += counter.mean || 0;
+      acc[key].std_dev_sum += counter.std_dev || 0;
       acc[key].count++;
       
       return acc;

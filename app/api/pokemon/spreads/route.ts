@@ -14,17 +14,17 @@ export async function GET(request: Request) {
       where,
       select: {
         name: true,
-        Nature: true,
+        nature: true,
         hp_ev: true,
         atk_ev: true,
         def_ev: true,
         spatk_ev: true,
         spdef_ev: true,
         spd_ev: true,
-        Usage: true,
+        usage: true,
       },
       orderBy: {
-        Usage: 'desc',
+        usage: 'desc',
       },
     });
 

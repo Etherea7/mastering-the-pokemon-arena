@@ -14,11 +14,11 @@ export async function GET(request: Request) {
       where,
       select: {
         name: true,
-        Item: true,
-        Usage: true,
+        item: true,
+        usage: true,
       },
       orderBy: {
-        Usage: 'desc',
+        usage: 'desc',
       },
     });
 

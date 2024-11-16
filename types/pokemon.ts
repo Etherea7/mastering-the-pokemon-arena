@@ -22,4 +22,4 @@ export interface PokemonStats {
   // Cache expiration time (24 hours)
   export const CACHE_EXPIRATION = 24 * 60 * 60 * 1000;
   export const CACHE_KEY = 'pokemon-data-cache';
-  export const MAX_CONCURRENT_REQUESTS = 20;
+  export const MAX_CONCURRENT_REQUESTS = 100;

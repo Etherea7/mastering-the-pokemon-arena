@@ -4,31 +4,31 @@ import { errorResponse, successResponse } from '@/lib/api';
 
 // Define interfaces for our data structures
 interface BaseStatsRecord {
-  Usage: number | null
+  usage: number | null
   year_month: string
 }
 
 interface AbilityRecord extends BaseStatsRecord {
-  Ability: string
+  ability: string
 }
 
 interface ItemRecord extends BaseStatsRecord {
-  Item: string
+  item: string
 }
 
 interface TeammateRecord extends BaseStatsRecord {
-  Teammate: string
+  teammate: string
 }
 
 interface CounterRecord {
   opp_pokemon: string
-  Lose_Rate_Against_Opp: number | null
+  lose_rate_against_opp: number | null
   year_month: string
 }
 
 interface UsageRecord {
   usage_percent: number | null
-  raw_count: number | null
+  raw_count: bigint | number | null
   year_month: string
 }
 
@@ -40,11 +40,11 @@ function calculateAverages<T extends BaseStatsRecord>(
   const averages = new Map<string, { total: number; count: number }>();
   
   data.forEach(item => {
-    if (item.Usage !== null) {
+    if (item.usage !== null) {
       const name = item[nameKey] as string;
       const current = averages.get(name) || { total: 0, count: 0 };
       averages.set(name, {
-        total: current.total + item.Usage,
+        total: current.total + item.usage,
         count: current.count + 1
       });
     }
@@ -63,10 +63,10 @@ function calculateCounterAverages(data: CounterRecord[]) {
   const averages = new Map<string, { total: number; count: number }>();
   
   data.forEach(item => {
-    if (item.Lose_Rate_Against_Opp !== null) {
+    if (item.lose_rate_against_opp !== null) {
       const current = averages.get(item.opp_pokemon) || { total: 0, count: 0 };
       averages.set(item.opp_pokemon, {
-        total: current.total + item.Lose_Rate_Against_Opp,
+        total: current.total + item.lose_rate_against_opp,
         count: current.count + 1
       });
     }
@@ -84,9 +84,10 @@ function calculateCounterAverages(data: CounterRecord[]) {
 function calculateUsageAverages(data: UsageRecord[]) {
   const totals = data.reduce(
     (acc, curr) => {
+      const currRawCount = curr.raw_count === null ? 0 : (typeof curr.raw_count === 'bigint' ? Number(curr.raw_count) : curr.raw_count);
       return {
         usage_percent: acc.usage_percent + (curr.usage_percent || 0),
-        raw_count: acc.raw_count + (curr.raw_count || 0),
+        raw_count: acc.raw_count + currRawCount,
         count: acc.count + 1
       };
     },
@@ -134,8 +135,8 @@ export async function GET(
       prisma.pokemonAbilities.findMany({
         where,
         select: {
-          Ability: true,
-          Usage: true,
+          ability: true,
+          usage: true,
           year_month: true
         }
       }),
@@ -143,8 +144,8 @@ export async function GET(
       prisma.pokemonItems.findMany({
         where,
         select: {
-          Item: true,
-          Usage: true,
+          item: true,
+          usage: true,
           year_month: true
         }
       }),
@@ -152,8 +153,8 @@ export async function GET(
       prisma.pokemonTeammates.findMany({
         where,
         select: {
-          Teammate: true,
-          Usage: true,
+          teammate: true,
+          usage: true,
           year_month: true
         }
       }),
@@ -162,7 +163,7 @@ export async function GET(
         where,
         select: {
           opp_pokemon: true,
-          Lose_Rate_Against_Opp: true,
+          lose_rate_against_opp: true,
           year_month: true
         }
       }),
@@ -178,9 +179,9 @@ export async function GET(
     ]);
 
     // Calculate all averages using the helper functions
-    const topAbility = calculateAverages<AbilityRecord>(abilities, 'Ability');
-    const topItem = calculateAverages<ItemRecord>(items, 'Item');
-    const topTeammate = calculateAverages<TeammateRecord>(teammates, 'Teammate');
+    const topAbility = calculateAverages<AbilityRecord>(abilities, 'ability');
+    const topItem = calculateAverages<ItemRecord>(items, 'item');
+    const topTeammate = calculateAverages<TeammateRecord>(teammates, 'teammate');
     const bestCounter = calculateCounterAverages(counters);
     const averageUsage = calculateUsageAverages(usageStats);
 

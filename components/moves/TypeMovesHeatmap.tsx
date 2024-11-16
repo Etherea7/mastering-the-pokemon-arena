@@ -16,13 +16,13 @@ interface Move {
 }
 
 interface ProcessedMoveData {
-    type: string;
-    physical: number;
-    special: number;
-    status: number;
-    total: number;
-    percentageOfTotal: number;
-  }
+  type: string;
+  physical: number;
+  special: number;
+  status: number;
+  total: number;
+  percentageOfTotal: number;
+}
 
 interface MoveTypeHeatmapProps {
   moves: Record<string, Move>;
@@ -65,21 +65,21 @@ export function MoveTypeHeatmap({ moves }: MoveTypeHeatmapProps) {
   };
 
   return (
-    <Card>
+    <Card className="h-[500px] flex flex-col">
       <CardHeader>
         <CardTitle>Move Distribution Heatmap</CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-[auto_1fr_1fr_1fr] gap-2">
+      <CardContent className="flex-1 overflow-auto">
+        <div className="grid grid-cols-[auto_1fr_1fr_1fr] gap-2 min-w-[600px]">
           {/* Header */}
-          <div className=""></div>
-          <div className="text-center font-medium">Physical</div>
-          <div className="text-center font-medium">Special</div>
-          <div className="text-center font-medium">Status</div>
+          <div className="sticky top-0 bg-background z-10"></div>
+          <div className="sticky top-0 bg-background z-10 text-center font-medium">Physical</div>
+          <div className="sticky top-0 bg-background z-10 text-center font-medium">Special</div>
+          <div className="sticky top-0 bg-background z-10 text-center font-medium">Status</div>
 
           {/* Data rows */}
           {data.map(({ type, physical, special, status, total, percentageOfTotal }) => (
-            <TooltipProvider key={type}>
+            <TooltipProvider key={type} delayDuration={0}>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div className="contents">
@@ -121,15 +121,12 @@ export function MoveTypeHeatmap({ moves }: MoveTypeHeatmapProps) {
                     </div>
                   </div>
                 </TooltipTrigger>
-                <TooltipContent>
+                <TooltipContent side="right" align="start">
                   <div className="space-y-1">
                     <div className="font-medium">{type} Type Moves</div>
                     <div className="text-sm">Total: {total} moves</div>
                     <div className="text-sm">
                       {percentageOfTotal.toFixed(1)}% of all moves
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      Click to see move details
                     </div>
                   </div>
                 </TooltipContent>

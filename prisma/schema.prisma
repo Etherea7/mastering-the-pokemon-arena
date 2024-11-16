@@ -3,166 +3,125 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./pokemon_data.db?connection_limit=1&connect_timeout=30&pool_timeout=30&socket_timeout=30&mode=readonly"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model PokemonBase {
-  id                String  @id
+  id                Int      @id @default(autoincrement())
   name              String
-  generation        String
-  battle_format     String
-  rating            Int
-  year_month        String
   raw_count         Int?
   avg_weight        Float?
   viability_ceiling Int?
+  generation        String
+  battle_format     String
+  rating            BigInt
+  year_month        String
 
-  @@index([viability_ceiling], map: "idx_base_viability")
-  @@index([generation, battle_format], map: "idx_base_gen_format")
-  @@index([name], map: "idx_base_name")
-  @@unique([name, generation, battle_format, rating, year_month])
   @@map("pokemon_base")
 }
 
 model PokemonUsage {
-  id            String  @id
-  name          String
-  generation    String
-  battle_format String
-  rating        Int
-  year_month    String
+  id            Int      @id @default(autoincrement())
   rank          Int?
+  name          String
   usage_percent Float?
   raw_count     Int?
   raw_percent   Float?
   real_count    Int?
   real_percent  Float?
+  year_month    String
+  generation    String
+  battle_format String
+  rating        Int
 
-  @@index([usage_percent], map: "idx_usage_percent")
-  @@index([rank], map: "idx_usage_rank")
-  @@unique([name, generation, battle_format, rating, year_month])
   @@map("pokemon_usage")
 }
 
 model PokemonMoves {
-  id            String  @id
+  id            Int      @id @default(autoincrement())
   name          String
   generation    String
   battle_format String
-  rating        Int
+  rating        BigInt
   year_month    String
-  Move          String
-  Usage         Float?
+  move          String
+  usage         Float?
 
-  @@index([Usage], map: "idx_pokemon_moves_usage")
-  @@index([Move], map: "idx_pokemon_moves_move")
-  @@unique([name, generation, battle_format, rating, year_month, Move])
   @@map("pokemon_moves")
 }
 
 model PokemonAbilities {
-  id            String  @id
+  id            Int      @id @default(autoincrement())
   name          String
   generation    String
   battle_format String
   rating        Int
   year_month    String
-  Ability       String
-  Usage         Float?
+  ability       String
+  usage         Float?
 
-  @@index([Usage], map: "idx_pokemon_abilities_usage")
-  @@index([Ability], map: "idx_pokemon_abilities_ability")
-  @@unique([name, generation, battle_format, rating, year_month, Ability])
   @@map("pokemon_abilities")
 }
 
 model PokemonItems {
-  id            String  @id
+  id            Int      @id @default(autoincrement())
   name          String
   generation    String
   battle_format String
   rating        Int
   year_month    String
-  Item          String
-  Usage         Float?
+  item          String
+  usage         Float?
 
-  @@index([Usage], map: "idx_pokemon_items_usage")
-  @@index([Item], map: "idx_pokemon_items_item")
-  @@unique([name, generation, battle_format, rating, year_month, Item])
   @@map("pokemon_items")
 }
 
 model PokemonTeammates {
-  id            String  @id
+  id            Int      @id @default(autoincrement())
   name          String
   generation    String
   battle_format String
   rating        Int
   year_month    String
-  Teammate      String
-  Usage         Float?
+  teammate      String
+  usage         Float?
 
-  @@index([Usage], map: "idx_pokemon_teammates_usage")
-  @@index([Teammate], map: "idx_pokemon_teammates_teammate")
-  @@unique([name, generation, battle_format, rating, year_month, Teammate])
   @@map("pokemon_teammates")
 }
 
-model PokemonTeraTypes {
-  id            String  @id
-  name          String
-  generation    String
-  battle_format String
-  rating        Int
-  year_month    String
-  tera_type     String
-  Usage         Float?
-
-  @@index([Usage], map: "idx_pokemon_teratypes_usage")
-  @@index([tera_type], map: "idx_pokemon_teratypes_tera_type")
-  @@unique([name, generation, battle_format, rating, year_month, tera_type])
-  @@map("pokemon_teratypes")
-}
-
 model PokemonSpreads {
-  id            String  @id
+  id            Int      @id @default(autoincrement())
   name          String
   generation    String
   battle_format String
   rating        Int
   year_month    String
-  Nature        String
-  hp_ev         Int
-  atk_ev        Int
-  def_ev        Int
-  spatk_ev      Int
-  spdef_ev      Int
-  spd_ev        Int
-  Usage         Float?
+  usage         Float?
+  nature        String
+  hp_ev         Int?
+  atk_ev        Int?
+  def_ev        Int?
+  spatk_ev      Int?
+  spdef_ev      Int?
+  spd_ev        Int?
 
-  @@index([Usage], map: "idx_spreads_usage")
-  @@index([Nature], map: "idx_spreads_nature")
-  @@unique([name, generation, battle_format, rating, year_month, Nature, hp_ev, atk_ev, def_ev, spatk_ev, spdef_ev, spd_ev])
   @@map("pokemon_spreads")
 }
 
 model PokemonCounters {
-  id                    String  @id
+  id                    Int      @id @default(autoincrement())
   name                  String
-  generation            String
-  battle_format         String
-  rating                Int
-  year_month            String
-  opp_pokemon           String
-  Lose_Rate_Against_Opp Float?
-  Mean                  Float?
-  Std_Dev              Float?
-  KO_Percent            Float?
-  Switch_Percent        Float?
+  generation           String
+  battle_format        String
+  rating               BigInt
+  year_month           String
+  opp_pokemon          String
+  lose_rate_against_opp Float?
+  mean                 Float?
+  std_dev             Float?
+  ko_percent          Float?
+  switch_percent      Float?
 
-  @@index([Lose_Rate_Against_Opp], map: "idx_counters_lose_rate")
-  @@index([opp_pokemon], map: "idx_counters_opponent")
-  @@unique([name, generation, battle_format, rating, year_month, opp_pokemon])
   @@map("pokemon_counters")
 }

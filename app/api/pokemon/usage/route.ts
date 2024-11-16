@@ -49,24 +49,31 @@ export async function GET(request: Request) {
     const data = await prisma.pokemonUsage.findMany({
       where,
       select: {
+        id: true,
         name: true,
         usage_percent: true,
         raw_count: true,
+        raw_percent: true,
         real_count: true,
-        rank: true,
+        real_percent: true,
         year_month: true,
-        battle_format: true,
         generation: true,
+        battle_format: true,
         rating: true
       },
-      orderBy: [
-        { year_month: 'asc' },
-        { usage_percent: 'desc' }
-      ]
+      orderBy: {
+        usage_percent: 'desc'
+      }
     })
 
+    // Convert BigInt values to numbers before JSON serialization
+    const serializedData = data.map(item => ({
+      ...item,
+      raw_count: item.raw_count ? Number(item.raw_count) : null,
+      real_count: item.real_count ? Number(item.real_count) : null
+    }));
     
-    return NextResponse.json({ data })
+    return NextResponse.json({ data: serializedData })
 
   } catch (error) {
     console.error('API Error:', error)
