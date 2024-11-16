@@ -71,23 +71,38 @@ export function useMoveData() {
         const allMoves: Record<string, Move> = {};
         for (let i = 0; i < total; i += MOVES_PER_BATCH) {
           const batch = await Promise.all(
-            Array.from({ length: Math.min(MOVES_PER_BATCH, total - i) }, (_, index) =>
-              fetch(`https://pokeapi.co/api/v2/move/${i + index + 1}`).then(res => res.json())
-            )
+            Array.from({ length: Math.min(MOVES_PER_BATCH, total - i) }, async (_, index) => {
+              try {
+                const res = await fetch(`https://pokeapi.co/api/v2/move/${i + index + 1}`);
+                if (!res.ok) {
+                  if (res.status === 404) {
+                    console.warn(`Move ${i + index + 1} not found, skipping...`);
+                    return null;
+                  }
+                  throw new Error(`HTTP error! status: ${res.status}`);
+                }
+                return await res.json();
+              } catch (error) {
+                console.error(`Error fetching move ${i + index + 1}:`, error);
+                return null;
+              }
+            })
           );
 
           batch.forEach(move => {
-            allMoves[move.name] = {
-              id: move.id,
-              name: move.name,
-              type: move.type.name,
-              power: move.power,
-              accuracy: move.accuracy,
-              pp: move.pp,
-              damage_class: move.damage_class.name,
-              effect_entries: move.effect_entries.map((entry: any) => entry.effect),
-              url: `https://pokeapi.co/api/v2/move/${move.id}`
-            };
+            if (move) {
+              allMoves[move.name] = {
+                id: move.id,
+                name: move.name,
+                type: move.type.name,
+                power: move.power,
+                accuracy: move.accuracy,
+                pp: move.pp,
+                damage_class: move.damage_class.name,
+                effect_entries: move.effect_entries.map((entry: any) => entry.effect),
+                url: `https://pokeapi.co/api/v2/move/${move.id}`
+              };
+            }
           });
 
           setProgress({ current: i + batch.length, total });
