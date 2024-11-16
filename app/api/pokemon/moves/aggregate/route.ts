@@ -17,7 +17,7 @@ export async function GET(request: Request) {
 
     // Changed from _sum to _avg to get average usage rates
     const data = await prisma.pokemonMoves.groupBy({
-      by: ['Move', 'year_month'],
+      by: ['move', 'year_month'],
       where: {
         name: name,
         generation: generation,
@@ -28,7 +28,7 @@ export async function GET(request: Request) {
         },
       },
       _avg: {  // Changed from _sum to _avg
-        Usage: true,
+        usage: true,
       },
       orderBy: {
         year_month: 'asc',
@@ -37,12 +37,12 @@ export async function GET(request: Request) {
 
     // Transform the data, now using _avg instead of _sum
     const groupedData: Record<string, { year_month: string; usage: number }[]> = {};
-    data.forEach(({ Move, year_month, _avg }) => {
-      if (!groupedData[Move]) groupedData[Move] = [];
+    data.forEach(({ move, year_month, _avg }) => {
+      if (!groupedData[move]) groupedData[move] = [];
       // Round to 2 decimal places for cleaner numbers
-      groupedData[Move].push({ 
+      groupedData[move].push({ 
         year_month, 
-        usage: _avg.Usage ? Number(_avg.Usage.toFixed(2)) : 0 
+        usage: _avg.usage ? Number(_avg.usage.toFixed(2)) : 0 
       });
     });
 

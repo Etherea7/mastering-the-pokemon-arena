@@ -27,21 +27,21 @@ export async function GET(
     const teammates = await prisma.pokemonTeammates.findMany({
       where,
       select: {
-        Teammate: true,
-        Usage: true,
+        teammate: true,
+        usage: true,
         year_month: true,
         rating: true,
       },
       orderBy: {
-        Usage: 'desc'
+        usage: 'desc'
       }
     });
 
     return successResponse({
       pokemon: name,
       teammates: teammates.map(t => ({
-        teammate: t.Teammate,
-        usage: t.Usage,
+        teammate: t.teammate,
+        usage: t.usage,
         year_month: t.year_month
       })) // Return raw data for frontend processing
     });
