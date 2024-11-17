@@ -1,6 +1,13 @@
 import { Redis } from '@upstash/redis'
 
-export const redis = Redis.fromEnv()
+if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) {
+  throw new Error('Redis environment variables are not properly configured')
+}
+
+export const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN,
+})
 
 export async function getFromCache<T>(key: string): Promise<T | null> {
   try {
