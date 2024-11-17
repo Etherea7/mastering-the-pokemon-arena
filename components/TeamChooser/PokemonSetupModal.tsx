@@ -37,32 +37,32 @@ interface Nature {
 
 interface AbilityData {
     name: string;
-    Ability: string;
-    Usage: number;
+    ability: string;
+    usage: number;
   }
   
   interface ItemData {
     name: string;
-    Item: string;
-    Usage: number;
+    item: string;
+    usage: number;
   }
   
   interface MoveData {
     name: string;
-    Move: string;
-    Usage: number;
+    move: string;
+    usage: number;
   }
   
   interface SpreadData {
     name: string;
-    Nature: string;
+    nature: string;
     hp_ev: number;
     atk_ev: number;
     def_ev: number;
     spatk_ev: number;
     spdef_ev: number;
     spd_ev: number;
-    Usage: number;
+    usage: number;
   }
 
 interface PokemonSetup {
@@ -173,7 +173,7 @@ const calculateStat = (
   return Math.floor((Math.floor(((2 * baseStat + 31 + Math.floor(ev/4)) * level) / 100) + 5) * natureMod);
 };
 
-const aggregateData = <T extends { Usage: number }>(
+const aggregateData = <T extends { usage: number }>(
     data: T[],
     getKey: (item: T) => string
   ): { name: string; usage: number }[] => {
@@ -182,7 +182,7 @@ const aggregateData = <T extends { Usage: number }>(
       if (!acc[key]) {
         acc[key] = { total: 0, count: 0 };
       }
-      acc[key].total += item.Usage;
+      acc[key].total += item.usage;
       acc[key].count += 1;
       return acc;
     }, {} as Record<string, { total: number; count: number }>);
@@ -192,6 +192,7 @@ const aggregateData = <T extends { Usage: number }>(
         name: key,
         usage: total / count
       }))
+      .filter(item => item.usage >= 30)
       .sort((a, b) => b.usage - a.usage);
   };
   
@@ -206,11 +207,11 @@ const aggregateData = <T extends { Usage: number }>(
   
     data.forEach(spread => {
       // Create a unique key for this spread combination
-      const key = `${spread.Nature}-${spread.hp_ev}-${spread.atk_ev}-${spread.def_ev}-${spread.spatk_ev}-${spread.spdef_ev}-${spread.spd_ev}`;
+      const key = `${spread.nature}-${spread.hp_ev}-${spread.atk_ev}-${spread.def_ev}-${spread.spatk_ev}-${spread.spdef_ev}-${spread.spd_ev}`;
       
       if (!spreadMap.has(key)) {
         spreadMap.set(key, {
-          nature: spread.Nature,
+          nature: spread.nature,
           evs: {
             hp: spread.hp_ev,
             attack: spread.atk_ev,
@@ -225,7 +226,7 @@ const aggregateData = <T extends { Usage: number }>(
       }
   
       const stats = spreadMap.get(key)!;
-      stats.totalUsage += spread.Usage;
+      stats.totalUsage += spread.usage;
       stats.count += 1;
     });
   
@@ -236,6 +237,7 @@ const aggregateData = <T extends { Usage: number }>(
         evs,
         usage: totalUsage / count
       }))
+      .filter(item => item.usage >= 30)
       .sort((a, b) => b.usage - a.usage);
   };
 
@@ -329,11 +331,11 @@ export function PokemonSetupModal({
      
 
         const aggregatedSetups = {
-            ability: aggregateData(abilities.data || [], (item: AbilityData) => item.Ability),
-            item: aggregateData(items.data || [], (item: ItemData) => item.Item),
-            moves: aggregateData(moves.data || [], (item: MoveData) => item.Move),
-            spreads: aggregateSpreads(spreads.data || [])
-          };
+          ability: aggregateData(abilities.data || [], (item: AbilityData) => item.ability),
+          item: aggregateData(items.data || [], (item: ItemData) => item.item),
+          moves: aggregateData(moves.data || [], (item: MoveData) => item.move),
+          spreads: aggregateSpreads(spreads.data || [])
+        };
       
           setRecommendedSetups(aggregatedSetups);
       
@@ -572,7 +574,7 @@ export function PokemonSetupModal({
                             }
                           }}
                         >
-                          {name} ({(usage * 100).toFixed(1)}%)
+                          {name} ({(usage ).toFixed(1)}%)
                         </Badge>
                       ))}
                     </div>

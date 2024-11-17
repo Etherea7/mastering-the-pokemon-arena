@@ -3,7 +3,17 @@ import { prisma } from '@/lib/prisma';
 import { errorResponse, successResponse } from '@/lib/api';
 import { Redis } from '@upstash/redis';
 
-const redis = Redis.fromEnv();
+let redis: Redis;
+try {
+  redis = Redis.fromEnv();
+} catch (error) {
+  console.error('Failed to initialize Redis:', error);
+  // Fallback to create Redis instance manually if environment variables are not available
+  redis = new Redis({
+    url: process.env.UPSTASH_REDIS_REST_URL || '',
+    token: process.env.UPSTASH_REDIS_REST_TOKEN || '',
+  });
+}
 
 // Define interfaces for our data structures
 interface BaseStatsRecord {

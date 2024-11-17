@@ -292,10 +292,11 @@ export default function TeamChooser() {
   
       const recommendations = aggregatedTeammates
         .filter(teammate => !currentTeamPokemon.includes(teammate.name))
+        .filter(teammate => teammate.avgUsage >= 30)  // Only show recommendations with usage >= 30%
         .map(teammate => ({
           name: teammate.name,
-          usage: teammate.avgUsage, // Convert to percentage
-          recommendedFor: teammate.recommendedFor // Include this in the UI if desired
+          usage: teammate.avgUsage,
+          recommendedFor: teammate.recommendedFor
         }));
   
       setRecommendations(recommendations);

@@ -20,7 +20,6 @@ interface MonthlyUsage {
   usage: number;
 }
 
-
 interface RawMoveData {
   data: {
     [moveName: string]: Array<{
@@ -86,7 +85,6 @@ export function PokemonMoves({
         const rawData: RawMoveData = await usageResponse.json();
         
   
-  
         // 2. Process the usage data - handle the nested data structure
         const processedUsages = Object.entries(rawData.data || {}).reduce((acc: ProcessedMoveUsage[], [moveName, monthlyData]) => {
           // Safety check for array
@@ -118,17 +116,27 @@ export function PokemonMoves({
 
         setMoveUsages(processedUsages);
   
-        // Rest of the code remains the same...
         // 3. Fetch move types
         const moveTypePromises = processedUsages.map(async (moveData) => {
           try {
+            // Special handling for "Other" moves
+            if (moveData.move.toLowerCase() === 'other') {
+              return [moveData.move, 'unknown'];
+            }
+
             const formattedMoveName = moveData.move.toLowerCase().replace(/\s+/g, '-');
             const response = await fetch(`/api/pokeapi/moves/${formattedMoveName}`);
+            
+            if (!response.ok) {
+              console.warn(`Move not found in PokeAPI: ${moveData.move}`);
+              return [moveData.move, 'unknown'];
+            }
+
             const data = await response.json();
             return [moveData.move, data.type];
           } catch (error) {
             console.error(`Failed to fetch type for ${moveData.move}:`, error);
-            return [moveData.move, 'normal'];
+            return [moveData.move, 'unknown'];
           }
         });
   
@@ -139,19 +147,38 @@ export function PokemonMoves({
         if (initialMoves?.length > 0) {
           const movePromises = initialMoves.map(async (moveEntry) => {
             if (!moveEntry?.move?.url) return null;
-  
+
             try {
+              // Special handling for "Other" moves
+              if (moveEntry.move.name.toLowerCase() === 'other') {
+                return {
+                  name: 'Other',
+                  type: 'unknown',
+                  power: null,
+                  accuracy: null,
+                  pp: 0,
+                  damage_class: 'unknown',
+                  effect_entries: 'Other moves not commonly used',
+                  usage: moveUsages.find(u => u.move.toLowerCase() === 'other')
+                };
+              }
+
               const moveResponse = await fetch(moveEntry.move.url);
+              if (!moveResponse.ok) {
+                console.warn(`Failed to fetch move data for ${moveEntry.move.name}`);
+                return null;
+              }
+
               const moveData = await moveResponse.json();
-  
+
               const usageInfo = processedUsages.find((usage) => 
                 usage.move.toLowerCase() === moveData.name.replace(/-/g, ' ').toLowerCase()
               );
-  
+
               const effectEntry = moveData.effect_entries.find((entry: any) => 
                 entry.language.name === 'en'
               );
-  
+
               return {
                 name: moveData.name,
                 type: moveData.type.name,
@@ -171,7 +198,7 @@ export function PokemonMoves({
               return null;
             }
           });
-  
+
           const movesData = (await Promise.all(movePromises)).filter(Boolean);
           const sortedMoves = movesData.sort((a, b) => {
             if (a?.usage && b?.usage) return b.usage.max - a.usage.max;
@@ -179,7 +206,7 @@ export function PokemonMoves({
             if (b?.usage) return 1;
             return (a?.name || '').localeCompare(b?.name || '');
           });
-  
+
           setMoves(sortedMoves as Move[]);
         }
   
