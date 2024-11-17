@@ -45,7 +45,7 @@ export function usePokemonStats(
             setLoading(true)
             const params = new URLSearchParams({
               generation: selectedGeneration,
-              battle_format: battleFormat,
+              battle_format: battleFormat.toLowerCase(),
               ...(rating !== undefined && { rating: rating.toString() }),
               ...(yearMonthGte && { year_month_gte: yearMonthGte }),
               ...(yearMonthLte && { year_month_lte: yearMonthLte })
